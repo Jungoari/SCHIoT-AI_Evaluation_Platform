@@ -55,6 +55,11 @@ def can_approve(user, competition) -> bool:
     return is_admin2(user)
 
 
+def is_admin2_for(user, competition) -> bool:
+    """대회 단위 검사 함수 형태로 쓰기 위한 관리자2 판정"""
+    return is_admin2(user)
+
+
 def can_create_competition(user) -> bool:
     return is_admin2(user)
 

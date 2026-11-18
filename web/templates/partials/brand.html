@@ -1,0 +1,12 @@
+{% load static %}
+{# 순천향대학교 SCH 로고 + 서비스 제목. size: "lg"(로그인 화면) / 기본(사이드바) #}
+<a href="{% url 'core:home' %}" class="block">
+  <span class="flex items-center gap-2.5">
+    <img src="{% static 'img/sch-logo.png' %}" alt="순천향대학교 SCH 로고" class="{% if size == 'lg' %}h-9{% else %}h-7{% endif %} w-auto">
+    <span class="leading-tight">
+      <span class="block {% if size == 'lg' %}text-[15px]{% else %}text-[13px]{% endif %} font-bold text-[#24549C]">순천향대학교</span>
+      {% if size == "lg" %}<span class="block whitespace-nowrap text-[9.5px] font-semibold tracking-[0.08em] text-muted">SOON CHUN HYANG UNIVERSITY</span>{% else %}<span class="block whitespace-nowrap text-[11px] font-medium text-muted">사물인터넷학과</span>{% endif %}
+    </span>
+  </span>
+  <span class="mt-4 block {% if size == 'lg' %}text-[22px]{% else %}text-[19px]{% endif %} font-extrabold tracking-tight text-ink">{{ SITE_NAME }}</span>
+</a>

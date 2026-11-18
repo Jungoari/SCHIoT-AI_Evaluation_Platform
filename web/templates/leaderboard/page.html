@@ -1,0 +1,28 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}리더보드 · {{ project.title }}{% endblock %}
+{% block eyebrow %}<p class="mb-1.5 text-sm text-muted">{{ competition.title }} · {{ project.title }}</p>{% endblock %}
+{% block heading %}리더보드{% endblock %}
+{% block actions %}
+<a href="{% url 'competitions:project_detail' project.pk %}" class="btn-secondary">프로젝트로</a>
+{% if can_manage %}<a href="{% url 'review:queue' project.pk %}" class="btn-primary">검토 큐</a>{% endif %}
+{% endblock %}
+{% block content %}
+<section class="grid grid-cols-2 gap-4 xl:grid-cols-4">
+  <div class="stat"><p class="stat-label">순위 참여자</p><p class="stat-value">{{ stats.participants }}<span class="stat-sub"> 명</span></p></div>
+  <div class="stat"><p class="stat-label">1위 점수</p><p class="stat-value">{{ stats.top }}</p></div>
+  <div class="stat"><p class="stat-label">검증 통과</p><p class="stat-value">{{ stats.verified }}<span class="stat-sub">/{{ stats.participants }}</span></p></div>
+  <div class="stat"><p class="stat-label">{% if me %}내 순위{% else %}평가 지표{% endif %}</p><p class="stat-value {% if not me %}text-[18px]{% endif %}">{% if me %}{{ me.rank }}<span class="stat-sub"> 위</span>{% else %}{{ project.metric_label }} {% if project.higher_is_better %}↑{% else %}↓{% endif %}{% endif %}</p></div>
+</section>
+
+<section class="card mt-6 overflow-hidden">
+  <div class="flex flex-wrap items-center justify-between gap-3 px-6 pt-6">
+    <h2 class="card-title">{% if show_names %}실명 리더보드 (관리자 화면){% else %}리더보드 (익명){% endif %}</h2>
+    <div class="flex flex-wrap items-center gap-3 text-xs text-muted">
+      <span>참여자별 최고 점수 · 동점은 공동 순위 · 소수점 {{ project.decimals }}자리 기준</span>
+      <span class="flex items-center gap-1"><span class="rank-up scale-75"></span>/<span class="rank-down scale-75"></span> 24시간 전 대비</span>
+    </div>
+  </div>
+  <div class="mt-2">{% include "leaderboard/_table.html" %}</div>
+</section>
+<p class="mt-3 text-xs text-muted">검증 대기·검토 중 기록도 순위에 포함됩니다. 관리자2가 부적합으로 확정한 기록만 제외되며, 이 경우 해당 참여자의 다음 기록이 표시됩니다. 30초마다 자동 갱신</p>
+{% endblock %}

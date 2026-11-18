@@ -34,12 +34,22 @@ def test_A01_signup_with_valid_code_joins_competition(client, competition, parti
 
 @pytest.mark.django_db
 def test_A02_code_bruteforce_is_limited(client, competition, participant_code):
-    for _ in range(5):
+    for _ in range(10):
         client.post(reverse("accounts:signup"), signup_data("AAAA-BBBB-CCCC"))
-    # 6번째에는 올바른 코드여도 차단
+    # 10회 실패 후에는 올바른 코드여도 차단
     res = client.post(reverse("accounts:signup"), signup_data(participant_code))
     assert "15분간 제한" in res.content.decode()
     assert not User.objects.filter(email="new@test.kr").exists()
+
+
+@pytest.mark.django_db
+def test_A02_nine_failures_still_allowed(client, competition, participant_code):
+    """9회 실패까지는 제한 없음 → 올바른 코드로 가입 가능"""
+    for _ in range(9):
+        res = client.post(reverse("accounts:signup"), signup_data("AAAA-BBBB-CCCC"))
+    assert "남은 시도 1회" in res.content.decode()
+    res = client.post(reverse("accounts:signup"), signup_data(participant_code))
+    assert res.status_code == 302
 
 
 @pytest.mark.django_db

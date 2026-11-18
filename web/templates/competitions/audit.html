@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}감사 로그{% endblock %}
+{% block eyebrow %}<p class="mb-1.5 text-sm text-muted">{{ competition.title }}</p>{% endblock %}
+{% block heading %}감사 로그{% endblock %}
+{% block actions %}
+{% if is_admin2 %}<a href="?verify=1{% if action %}&action={{ action }}{% endif %}" class="btn-secondary">{% include "partials/icon.html" with name="shield" cls="h-4 w-4" %}위변조 검증</a>{% endif %}
+{% endblock %}
+{% block content %}
+{% if chain %}
+<div class="card mb-6 flex items-center gap-3 px-5 py-4 text-sm font-medium">
+  {% if chain.0 %}<span class="h-2.5 w-2.5 rounded-full bg-up"></span>해시 체인 검증 통과 — 전체 감사 로그가 위변조되지 않았습니다
+  {% else %}<span class="h-2.5 w-2.5 rounded-full bg-down"></span>위변조 감지 — 기록 #{{ chain.1 }} 부터 해시 체인이 맞지 않습니다{% endif %}
+</div>
+{% endif %}
+<div class="mb-5 flex flex-wrap gap-2 text-sm">
+  <a href="?" class="{% if not action %}badge-brand{% else %}badge-slate{% endif %}">전체</a>
+  <a href="?action=submission" class="{% if action == 'submission' %}badge-brand{% else %}badge-slate{% endif %}">제출·채점</a>
+  <a href="?action=review" class="{% if action == 'review' %}badge-brand{% else %}badge-slate{% endif %}">검토·승인</a>
+  <a href="?action=project" class="{% if action == 'project' %}badge-brand{% else %}badge-slate{% endif %}">프로젝트 설정</a>
+  <a href="?action=deadline" class="{% if action == 'deadline' %}badge-brand{% else %}badge-slate{% endif %}">마감일</a>
+  <a href="?action=membership" class="{% if action == 'membership' %}badge-brand{% else %}badge-slate{% endif %}">회원</a>
+  <a href="?action=integrity" class="{% if action == 'integrity' %}badge-brand{% else %}badge-slate{% endif %}">무결성</a>
+</div>
+<section class="card overflow-hidden">
+  <div class="overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>#</th><th>시각</th><th>수행자</th><th>동작</th><th>내용</th><th>해시</th></tr></thead>
+    <tbody>
+    {% for log in logs %}
+      <tr>
+        <td class="tabular text-muted">{{ log.pk }}</td>
+        <td class="whitespace-nowrap tabular text-muted">{{ log.created_at|date:"m-d H:i:s" }}</td>
+        <td class="whitespace-nowrap">{{ log.actor.name|default:"시스템" }}</td>
+        <td><code class="text-xs text-brand-700">{{ log.action }}</code></td>
+        <td>{{ log.summary }}</td>
+        <td><code class="text-xs text-faint" title="{{ log.hash }}">{{ log.hash|slice:":10" }}…</code></td>
+      </tr>
+    {% empty %}<tr><td colspan="6" class="py-10 text-center text-muted">기록이 없습니다</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+<p class="mt-3 text-xs text-muted">각 기록은 이전 기록의 해시를 포함합니다. 중간 기록을 수정·삭제하면 '위변조 검증'에서 드러납니다. 애플리케이션에는 감사 로그 수정·삭제 기능이 없습니다</p>
+{% endblock %}

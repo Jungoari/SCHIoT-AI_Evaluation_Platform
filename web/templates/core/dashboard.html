@@ -1,8 +1,14 @@
 {% extends "base.html" %}
 {% block title %}대시보드{% endblock %}
-{% block eyebrow %}<p class="mb-1 text-sm font-medium text-muted">안녕하세요, {{ user.name }}님</p>{% endblock %}
+{% block eyebrow %}
+<p class="mb-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
+  <span>현재 로그인 계정 : <span class="font-semibold text-ink">{{ user.name }}</span></span>
+  <span>권한: <span class="font-semibold text-brand-600">({{ role_label }})</span></span>
+</p>
+{% endblock %}
 {% block heading %}대시보드{% endblock %}
 {% block actions %}
+{% if user.is_admin2 %}<a href="{% url 'competitions:create' %}" class="btn-primary">{% include "partials/icon.html" with name="plus" cls="h-4 w-4" %}대회 개설</a>{% endif %}
 <a href="{% url 'accounts:join' %}" class="btn-secondary">{% include "partials/icon.html" with name="plus" cls="h-4 w-4" %}참여 코드 입력</a>
 {% endblock %}
 
@@ -27,6 +33,29 @@
   </div>
 </section>
 
+{% if todos %}
+<section class="card mt-6 p-6" data-testid="todos">
+  <h2 class="card-title">지금 할 일</h2>
+  <ul class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    {% for t in todos %}
+    <li>
+      <a href="{% if t.kind == 'setup' %}{% url 'competitions:project_settings' t.project.pk %}{% else %}{% url 'review:queue' t.project.pk %}{% if t.kind == 'approve' %}?state=proposed{% else %}?state=pending{% endif %}{% endif %}"
+         class="flex items-center gap-4 rounded-2xl bg-surface-2 px-4 py-3.5 transition hover:bg-brand-50">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-lg font-bold tabular
+          {% if t.kind == 'approve' %}bg-brand-600 text-white{% elif t.kind == 'review' %}bg-brand-100 text-brand-700{% else %}bg-amber-50 text-amber-700{% endif %}">
+          {% if t.count %}{{ t.count }}{% else %}!{% endif %}
+        </span>
+        <span class="min-w-0">
+          <span class="block truncate text-[15px] font-semibold">{{ t.project.title }}</span>
+          <span class="block text-sm text-muted">{% if t.kind == 'approve' %}관리자2 승인 대기{% elif t.kind == 'review' %}관리자1 검토 대기{% else %}설정 완료 후 공개 필요{% endif %}</span>
+        </span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
 <div class="mt-6 grid gap-6 xl:grid-cols-[1.6fr_1fr]">
   <!-- 내 대회 -->
   <section class="card p-6">
@@ -37,7 +66,7 @@
     {% if cards %}
     <ul class="mt-4">
       {% for card in cards %}
-      <li class="flex items-center gap-4 py-4 {% if not forloop.first %}divider{% endif %}">
+      <li class="{% if not forloop.first %}divider{% endif %}"><a href="{% url 'competitions:detail' card.competition.pk %}" class="-mx-3 flex items-center gap-4 rounded-2xl px-3 py-4 transition hover:bg-surface-2">
         <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-100 text-brand-600">
           {% include "partials/icon.html" with name="trophy" cls="h-6 w-6" %}
         </div>
@@ -51,7 +80,7 @@
         {% if card.role == "admin2" %}<span class="badge-brand">관리자2</span>
         {% elif card.role == "admin1" %}<span class="badge-blue">관리자1</span>
         {% else %}<span class="badge-slate">참여자</span>{% endif %}
-      </li>
+      </a></li>
       {% endfor %}
     </ul>
     {% else %}
@@ -78,7 +107,7 @@
           <span class="text-base font-bold leading-none tabular">{{ d.due_at|date:"j" }}</span>
         </div>
         <div class="min-w-0 flex-1">
-          <p class="truncate text-[15px] font-semibold">{{ d.project.title }}</p>
+          <a href="{% url 'competitions:project_detail' d.project.pk %}" class="block truncate text-[15px] font-semibold hover:underline">{{ d.project.title }}</a>
           <p class="truncate text-sm text-muted">{{ d.title }} · {{ d.due_at|date:"H:i" }} 마감</p>
         </div>
         <span class="text-sm font-semibold text-down tabular">{{ d.due_at|timeuntil:now }}</span>

@@ -15,7 +15,7 @@ from django.db import transaction
 from apps.accounts.models import User
 from apps.competitions.models import Competition, JoinCode, Membership, Role, random_alias
 
-DEMO_PASSWORD = "evalhub-demo-2026"  # noqa: S105 — 공개된 데모 전용 비밀번호
+DEMO_PASSWORD = "evalhub-demo-2026"  # noqa: S105  # nosec B105 — README 에 공개된 데모 전용 비밀번호
 DEMO_DOMAIN = "demo.evalhub"
 
 ADMIN2 = ("prof", "김교수")
@@ -23,6 +23,8 @@ ADMIN1 = [("ta", "이조교")]
 STUDENTS = [
     ("student1", "박민준"), ("student2", "최서연"), ("student3", "정도윤"), ("student4", "강하은"),
     ("student5", "윤지호"), ("student6", "임수아"), ("student7", "한예준"), ("student8", "오지우"),
+    ("student9", "서지안"), ("student10", "신하린"), ("student11", "권도현"), ("student12", "황서윤"),
+    ("student13", "안시우"), ("student14", "송유나"),
 ]
 
 
@@ -45,11 +47,40 @@ class Command(BaseCommand):
         with transaction.atomic():
             self._reset()
             codes = self._create()
+        self.stdout.write("실제 모델을 학습해 데모 제출을 만드는 중 …")
+        from apps.core import demo
+
+        users = {u.email.split("@")[0]: u for u in User.objects.filter(email__endswith=f"@{DEMO_DOMAIN}")}
+        comp = Competition.objects.get(pk=codes["competition_id"])
+        demo.build(users["prof"], users["ta"], users, comp, log=self.stdout.write)
         self._print(codes)
 
     def _reset(self):
-        Competition.objects.filter(created_by__email__endswith=f"@{DEMO_DOMAIN}").delete()
-        User.objects.filter(email__endswith=f"@{DEMO_DOMAIN}").delete()
+        from apps.audit.models import AuditLog
+
+        demo_users = User.objects.filter(email__endswith=f"@{DEMO_DOMAIN}")
+        comps = Competition.objects.filter(created_by__in=demo_users)
+        # 데모 재생성 시 감사 로그를 처음부터 다시 시작한다 (DEMO_MODE 전용 명령).
+        # 기존 기록을 수정하면 해시 체인이 깨지므로 수정 대신 전체 삭제 후 새 체인을 만든다
+        AuditLog.objects.all().delete()
+        from apps.competitions.models import ProjectFile
+        from apps.core import storage
+        from apps.review.models import Review
+        from apps.submissions.models import Submission
+
+        Review.objects.filter(submission__project__competition__in=comps).delete()
+        subs = Submission.objects.filter(project__competition__in=comps)
+        for sub in subs:  # 디스크의 제출 파일도 정리
+            for name in (sub.csv_file, sub.notebook_file, sub.weights_file):
+                storage.delete(storage.upload_root(), name)
+        subs.delete()
+        for pf in ProjectFile.objects.filter(project__competition__in=comps):
+            storage.delete(storage.upload_root(), pf.stored_name)
+        for comp in comps:
+            for project in comp.projects.all():
+                storage.delete(storage.label_root(), project.label_file)
+        comps.delete()
+        demo_users.delete()
 
     def _user(self, local, name, **extra):
         return User.objects.create_user(email=email(local), password=DEMO_PASSWORD, name=name, **extra)
@@ -61,7 +92,7 @@ class Command(BaseCommand):
 
         comp = Competition.objects.create(
             title="2026-2 머신러닝 기말 프로젝트",
-            description="붓꽃·주택가격 데이터로 분류·회귀 모델을 만들고 성능을 겨룹니다",
+            description="손글씨 숫자 분류와 당뇨 진행도 회귀 두 과제로 모델 성능을 겨룹니다",
             created_by=prof,
         )
         for ta in tas:
@@ -71,7 +102,7 @@ class Command(BaseCommand):
 
         _, p_code = JoinCode.issue(comp, Role.PARTICIPANT, prof)
         _, a_code = JoinCode.issue(comp, Role.ADMIN1, prof)
-        return {"participant": p_code, "admin1": a_code, "competition": comp.title}
+        return {"participant": p_code, "admin1": a_code, "competition": comp.title, "competition_id": comp.pk}
 
     def _print(self, codes):
         w = self.stdout.write
@@ -79,7 +110,7 @@ class Command(BaseCommand):
         w(f"  비밀번호(공통) : {DEMO_PASSWORD}")
         w(f"  관리자2        : {email(ADMIN2[0])}")
         w(f"  관리자1        : {email(ADMIN1[0][0])}")
-        w(f"  참여자         : {email('student1')} ~ {email('student8')}")
+        w(f"  참여자         : {email('student1')} ~ {email('student14')}")
         w(f"  대회           : {codes['competition']}")
         w(f"  참여자 코드    : {codes['participant']}")
         w(f"  관리자1 코드   : {codes['admin1']}")

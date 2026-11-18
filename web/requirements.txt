@@ -4,6 +4,8 @@ django-axes==9.0.0
 django-rq==4.2.0
 docker==7.2.0
 gunicorn==27.0.1
+joblib==1.6.0
+Markdown==3.11.3
 nbformat==5.11.1
 nh3==0.3.8
 numpy==2.5.5

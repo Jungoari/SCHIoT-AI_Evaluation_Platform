@@ -1,0 +1,203 @@
+{% extends "base.html" %}{% load ui static %}
+{% block title %}{{ project.title }}{% endblock %}
+{% block head %}{% if role == "participant" %}<script src="{% static 'js/sha256.js' %}" defer></script><script src="{% static 'js/submit.js' %}" defer></script>{% endif %}{% endblock %}
+{% block eyebrow %}<p class="mb-1.5 text-sm text-muted">{{ competition.title }} · 권한: <span class="font-semibold text-brand-600">({{ role_label }})</span></p>{% endblock %}
+{% block heading %}{{ project.title }}{% endblock %}
+{% block actions %}
+<a href="{% url 'leaderboard:page' project.pk %}" class="btn-secondary">{% include "partials/icon.html" with name="trophy" cls="h-4 w-4" %}리더보드</a>
+{% if can_manage %}<a href="{% url 'review:queue' project.pk %}" class="btn-secondary">검토 큐</a>{% endif %}
+{% if is_admin2 %}<a href="{% url 'competitions:project_settings' project.pk %}" class="btn-primary">설정</a>{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if not project.is_published %}
+<div class="card mb-6 flex items-center gap-3 px-5 py-4 text-sm font-medium"><span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span>비공개 프로젝트 — 참여자에게 보이지 않습니다</div>
+{% endif %}
+
+{% if role == "participant" and current_deadline %}
+{% if quota.current and quota.current.remaining == 0 %}
+<div class="card mb-6 flex items-center gap-3 px-5 py-4 text-sm font-medium" data-testid="banner"><span class="h-2.5 w-2.5 rounded-full bg-down"></span>'{{ current_deadline.title }}' 제출 횟수를 모두 사용했습니다. {% if deadlines|length > 1 %}다음 마감 구간이 시작되면 다시 제출할 수 있습니다{% endif %}</div>
+{% elif deadline_soon %}
+<div class="card mb-6 flex items-center gap-3 px-5 py-4 text-sm font-medium" data-testid="banner"><span class="h-2.5 w-2.5 animate-pulse rounded-full bg-amber-400"></span>마감까지 {{ current_deadline.due_at|timeuntil }} 남았습니다 · 남은 제출 {{ quota.current.remaining }}회 · 업로드를 '시작'한 시각이 마감 기준입니다</div>
+{% endif %}
+{% endif %}
+
+<!-- 요약 카드 -->
+<section class="grid grid-cols-2 gap-4 xl:grid-cols-4">
+  {% if role == "participant" %}
+  <div class="stat"><p class="stat-label">내 순위</p><p class="stat-value">{% if my_rank %}{{ my_rank.rank }}<span class="stat-sub"> 위</span>{% else %}-{% endif %}</p></div>
+  <div class="stat"><p class="stat-label">내 최고 점수</p><p class="stat-value">{% if my_rank %}{{ my_rank.score_text }}{% else %}-{% endif %}</p></div>
+  <div class="stat" data-testid="quota">
+    <p class="stat-label">남은 제출 {% if quota.current %}<span class="text-muted">· {{ quota.current.deadline.title }}</span>{% endif %}</p>
+    <p class="stat-value">{% if quota.current %}{{ quota.current.remaining }}<span class="stat-sub">/{{ quota.current.deadline.max_submissions }}</span>{% else %}<span class="text-[18px]">마감됨</span>{% endif %}</p>
+  </div>
+  {% else %}
+  <div class="stat"><p class="stat-label">채점 완료</p><p class="stat-value">{{ status_counts|get_item:"graded"|default:0 }}</p></div>
+  <div class="stat"><p class="stat-label">형식 오류 · 미차감</p><p class="stat-value">{{ status_counts|get_item:"invalid"|default:0 }}</p></div>
+  <div class="stat"><p class="stat-label">마감 후 접수</p><p class="stat-value">{{ status_counts|get_item:"late"|default:0 }}</p></div>
+  {% endif %}
+  <div class="stat">
+    <p class="stat-label">{% if current_deadline %}마감까지 · {{ current_deadline.title }}{% else %}마감{% endif %}</p>
+    <p class="stat-value text-[22px]">{% if current_deadline %}{{ current_deadline.due_at|timeuntil }}{% else %}종료{% endif %}</p>
+  </div>
+</section>
+
+<div class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+  <div class="min-w-0 space-y-6">
+    {% if role == "participant" %}
+    <!-- 제출 -->
+    <section class="card p-6" id="submit-card">
+      <div class="flex items-center justify-between">
+        <h2 class="card-title">제출하기</h2>
+        {% if quota.closed %}<span class="badge-amber">마감 후 제출은 접수만 되고 채점되지 않습니다</span>{% endif %}
+      </div>
+      {{ schema|json_script:"submit-schema" }}
+      <form id="submit-form" data-start-url="{% url 'submissions:start' project.pk %}" class="mt-4 space-y-4" novalidate>
+        <div class="grid gap-3 md:grid-cols-3">
+          <label class="dropzone group relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-line bg-surface-2/60 px-4 py-6 text-center transition hover:border-brand-400 hover:bg-brand-50" data-kind="csv">
+            <input type="file" name="csv" accept=".csv" class="sr-only">
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-600">{% include "partials/icon.html" with name="upload" cls="h-5 w-5" %}</span>
+            <span class="mt-3 text-sm font-semibold">예측 결과 .csv</span>
+            <span class="file-name mt-1 max-w-full truncate text-xs text-muted">필수 · 최대 {{ schema.max_bytes.csv|filesizeformat }}</span>
+          </label>
+          <label class="dropzone group relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-line bg-surface-2/60 px-4 py-6 text-center transition hover:border-brand-400 hover:bg-brand-50" data-kind="notebook">
+            <input type="file" name="notebook" accept=".ipynb" class="sr-only">
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-600">{% include "partials/icon.html" with name="upload" cls="h-5 w-5" %}</span>
+            <span class="mt-3 text-sm font-semibold">소스코드 .ipynb</span>
+            <span class="file-name mt-1 max-w-full truncate text-xs text-muted">필수 · 최대 {{ schema.max_bytes.notebook|filesizeformat }}</span>
+          </label>
+          <label class="dropzone group relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-line bg-surface-2/60 px-4 py-6 text-center transition hover:border-brand-400 hover:bg-brand-50" data-kind="weights">
+            <input type="file" name="weights" accept=".pkl,.pickle,.joblib,.pt,.pth,.h5,.keras,.onnx,.safetensors" class="sr-only">
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-600">{% include "partials/icon.html" with name="upload" cls="h-5 w-5" %}</span>
+            <span class="mt-3 text-sm font-semibold">모델 파라미터</span>
+            <span class="file-name mt-1 max-w-full truncate text-xs text-muted">필수 · .joblib .pkl .pt .h5 .keras .onnx …</span>
+          </label>
+        </div>
+        <textarea name="comment" rows="2" maxlength="2000" class="input" placeholder="코멘트 (선택) — 변경 사항, 특이 사항 등"></textarea>
+
+        <!-- 사전 검사 결과 -->
+        <div id="precheck" class="hidden rounded-2xl bg-surface-2 p-4 text-sm"></div>
+
+        <!-- 진행 상황 -->
+        <div id="progress" class="hidden space-y-2">
+          <div class="flex items-center justify-between text-sm"><span id="progress-label" class="font-medium">업로드 중</span><span id="progress-pct" class="tabular text-muted">0%</span></div>
+          <div class="progress-blue"><span id="progress-bar" style="width:0%"></span></div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <button type="submit" id="submit-btn" class="btn-primary px-6 py-3" {% if quota.current and quota.current.remaining == 0 %}disabled{% endif %}>
+            {% include "partials/icon.html" with name="upload" cls="h-4 w-4" %}제출
+          </button>
+          <p class="text-xs text-muted">형식 오류·업로드 실패·시스템 오류는 횟수가 차감되지 않습니다. 업로드를 시작한 시각이 마감 기준입니다</p>
+        </div>
+      </form>
+      <div id="submit-result" class="mt-4"></div>
+    </section>
+
+    <!-- 점수 추이 -->
+    <section class="card p-6">
+      <div class="flex items-center justify-between"><h2 class="card-title">내 점수 추이</h2><span class="text-sm font-semibold text-brand-600">최근 {{ score_history|length }}건</span></div>
+      {% if score_history %}
+      <div class="mt-5 flex h-48 items-end gap-3 px-1">
+        {% for h in score_history %}
+        <a href="{% url 'submissions:detail' h.sub.pk %}" class="group flex h-full flex-1 flex-col items-center gap-2" title="{{ h.sub.score|score:project.decimals }}">
+          <span class="text-[11px] font-semibold tabular text-muted opacity-0 transition group-hover:opacity-100">{{ h.sub.score|score:project.decimals }}</span>
+          <span class="bar-track flex-1"><span style="height:{{ h.height }}%"></span></span>
+          <span class="text-[11px] font-medium text-muted">{{ h.label }}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}<p class="mt-6 py-8 text-center text-sm text-muted">채점된 제출이 생기면 점수 추이가 표시됩니다</p>{% endif %}
+    </section>
+
+    <!-- 내 제출 -->
+    <section class="card overflow-hidden">
+      <div class="px-6 pt-6"><h2 class="card-title">내 제출 이력</h2></div>
+      <div class="mt-3 overflow-x-auto">
+      <table class="table">
+        <thead><tr><th>시작 시각</th><th>마감 구간</th><th>상태</th><th class="text-right">점수</th><th>검증</th></tr></thead>
+        <tbody>
+        {% for s in my_submissions %}
+        <tr class="cursor-pointer" data-href="{% url 'submissions:detail' s.pk %}">
+          <td class="whitespace-nowrap tabular"><a class="hover:underline" href="{% url 'submissions:detail' s.pk %}">{{ s.started_at|date:"m-d H:i:s" }}</a></td>
+          <td class="text-muted">{{ s.deadline.title|default:"마감 후" }}</td>
+          <td>{% submission_badge s.status %}</td>
+          <td class="text-right font-semibold tabular">{{ s.score|score:project.decimals }}</td>
+          <td>{% if s.status == "graded" %}{% if s.review %}{% review_badge s.review.state %}{% else %}{% review_badge "pending" %}{% endif %}{% endif %}</td>
+        </tr>
+        {% empty %}<tr><td colspan="5" class="py-10 text-center text-muted">아직 제출이 없습니다. 샘플 제출 파일로 형식을 먼저 확인해 보세요</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </section>
+    {% else %}
+    <!-- 관리자: 최근 제출 -->
+    <section class="card overflow-hidden">
+      <div class="flex items-center justify-between px-6 pt-6"><h2 class="card-title">최근 제출</h2><a class="text-sm font-semibold text-brand-600" href="{% url 'review:results' project.pk %}">최종 성적</a></div>
+      <div class="mt-3 overflow-x-auto">
+      <table class="table">
+        <thead><tr><th>참여자</th><th>시작 시각</th><th>상태</th><th class="text-right">점수</th></tr></thead>
+        <tbody>
+        {% for s in recent %}
+        <tr>
+          <td><a class="font-semibold hover:underline" href="{% url 'submissions:detail' s.pk %}">{{ s.user.name }}</a></td>
+          <td class="tabular text-muted">{{ s.started_at|date:"m-d H:i:s" }}</td>
+          <td>{% submission_badge s.status %}</td>
+          <td class="text-right font-semibold tabular">{{ s.score|score:project.decimals }}</td>
+        </tr>
+        {% empty %}<tr><td colspan="4" class="py-10 text-center text-muted">제출이 없습니다</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </section>
+    {% endif %}
+  </div>
+
+  <!-- 오른쪽: 안내 · 자료 · 마감 -->
+  <aside class="space-y-6">
+    <section class="card p-6">
+      <h2 class="card-title">프로젝트 안내</h2>
+      {% if project.description %}<p class="mt-3 whitespace-pre-line text-sm text-ink-2">{{ project.description }}</p>{% endif %}
+      <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div class="rounded-2xl bg-surface-2 p-3"><dt class="text-muted">평가 지표</dt><dd class="mt-0.5 font-semibold">{{ metric.label }}</dd></div>
+        <div class="rounded-2xl bg-surface-2 p-3"><dt class="text-muted">점수 방향</dt><dd class="mt-0.5 font-semibold">{% if project.higher_is_better %}높을수록 좋음 ↑{% else %}낮을수록 좋음 ↓{% endif %}</dd></div>
+        <div class="rounded-2xl bg-surface-2 p-3"><dt class="text-muted">제출 형식</dt><dd class="mt-0.5 font-mono text-xs font-semibold">{{ project.id_column }}, {{ project.target_column }}</dd></div>
+        <div class="rounded-2xl bg-surface-2 p-3"><dt class="text-muted">행 수</dt><dd class="mt-0.5 font-semibold tabular">{{ project.row_count }}</dd></div>
+      </dl>
+      {% if project.task_type == "classification" %}<p class="mt-3 text-xs text-muted">허용 레이블: {{ project.allowed_labels|join:", " }}</p>{% endif %}
+    </section>
+
+    <section class="card p-6">
+      <h2 class="card-title">자료 내려받기</h2>
+      <ul class="mt-4 space-y-2">
+        {% for f in files %}
+        <li><a href="{% url 'competitions:project_file' project.pk f.pk %}" class="flex items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3 text-sm transition hover:bg-brand-50">
+          {% include "partials/icon.html" with name="download" cls="h-4 w-4 text-brand-600" %}
+          <span class="font-medium">{{ f.get_kind_display }}</span>
+          <span class="ml-auto text-xs text-muted">{{ f.size|filesizeformat }}</span>
+        </a></li>
+        {% endfor %}
+        {% for f in extra_files %}
+        <li><a href="{% url 'competitions:project_file' project.pk f.pk %}" class="flex items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3 text-sm hover:bg-brand-50">{% include "partials/icon.html" with name="download" cls="h-4 w-4 text-muted" %}<span class="truncate">{{ f.original_name }}</span></a></li>
+        {% endfor %}
+      </ul>
+      <p class="mt-3 text-xs text-muted">테스트 특성 파일에는 정답이 없습니다. 템플릿 노트북의 <code>inference</code> 셀 약속을 지키면 검증이 빨라집니다</p>
+    </section>
+
+    <section class="card p-6">
+      <h2 class="card-title">마감일 · 제출 횟수</h2>
+      <ul class="mt-4 space-y-3">
+        {% for d in deadlines %}
+        <li class="flex items-center gap-4">
+          <div class="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl {% if current_deadline and current_deadline.pk == d.pk %}bg-brand-100 text-brand-700{% else %}bg-surface-2{% endif %}">
+            <span class="text-[11px] font-semibold">{{ d.due_at|date:"n월" }}</span><span class="text-base font-bold leading-none tabular">{{ d.due_at|date:"j" }}</span>
+          </div>
+          <div class="min-w-0 flex-1"><p class="font-semibold">{{ d.title }}</p><p class="text-sm text-muted">{{ d.due_at|date:"H:i" }} 마감 · 최대 {{ d.max_submissions }}회</p></div>
+          {% if role == "participant" %}{% for row in quota.rows %}{% if row.deadline.pk == d.pk %}<span class="text-sm font-semibold tabular {% if row.remaining == 0 %}text-down{% endif %}">{{ row.used }}/{{ d.max_submissions }}</span>{% endif %}{% endfor %}{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}

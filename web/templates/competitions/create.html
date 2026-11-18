@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}대회 개설{% endblock %}
+{% block heading %}대회 개설{% endblock %}
+{% block content %}
+<div class="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+  <section class="card p-8">
+    <form method="post" class="space-y-5" novalidate>
+      {% csrf_token %}
+      {% include "partials/field.html" with field=form.title %}
+      {% include "partials/field.html" with field=form.description %}
+      <button class="btn-primary w-full py-3">대회 개설하고 참여 코드 발급</button>
+    </form>
+  </section>
+  <section class="card p-8">
+    <h2 class="card-title">개설하면 일어나는 일</h2>
+    <ol class="mt-5 space-y-5 text-sm">
+      <li class="flex gap-4"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-100 font-bold text-brand-600">1</span><div><p class="font-semibold">참여자 코드 · 운영(관리자1) 코드 자동 발급</p><p class="mt-0.5 text-muted">코드는 화면에 한 번만 표시되고 해시로만 저장됩니다</p></div></li>
+      <li class="flex gap-4"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-100 font-bold text-brand-600">2</span><div><p class="font-semibold">프로젝트 추가</p><p class="mt-0.5 text-muted">정답 포함 테스트셋을 올리면 규격을 자동으로 추론합니다</p></div></li>
+      <li class="flex gap-4"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-100 font-bold text-brand-600">3</span><div><p class="font-semibold">마감일·제출 횟수 설정 후 공개</p><p class="mt-0.5 text-muted">정답 열이 제거된 배포 파일이 자동으로 만들어집니다</p></div></li>
+    </ol>
+  </section>
+</div>
+{% endblock %}

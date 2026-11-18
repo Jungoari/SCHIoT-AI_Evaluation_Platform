@@ -3,3 +3,6 @@ pytest-django
 ruff
 bandit
 pip-audit
+# GIF 녹화 · 발표 자료 생성 (선택)
+playwright
+python-pptx

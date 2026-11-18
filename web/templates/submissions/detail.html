@@ -1,0 +1,44 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}제출 상세{% endblock %}
+{% block eyebrow %}<p class="mb-1.5 text-sm text-muted">{{ project.title }} · {% if is_owner %}내 제출{% else %}{{ sub.user.name }}{% endif %}</p>{% endblock %}
+{% block heading %}제출 상세{% endblock %}
+{% block actions %}<a href="{% url 'competitions:project_detail' project.pk %}" class="btn-secondary">프로젝트로</a>{% endblock %}
+{% block content %}
+<section class="grid grid-cols-2 gap-4 xl:grid-cols-4">
+  <div class="stat"><p class="stat-label">점수</p><p class="stat-value">{{ sub.score|score:project.decimals }}</p></div>
+  <div class="stat"><p class="stat-label">상태</p><div class="mt-4">{% submission_badge sub.status %}</div></div>
+  <div class="stat"><p class="stat-label">검증</p><div class="mt-4">{% if sub.status == "graded" %}{% if review %}{% review_badge review.state %}{% else %}{% review_badge "pending" %}{% endif %}{% else %}<span class="text-sm text-muted">해당 없음</span>{% endif %}</div></div>
+  <div class="stat"><p class="stat-label">횟수 처리</p><p class="stat-value text-[18px]">{% if sub.slot == "used" %}1회 차감{% elif sub.slot == "reserved" %}처리 중{% else %}미차감{% endif %}</p></div>
+</section>
+
+<div class="mt-6 grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+  <section class="card p-6">
+    <h2 class="card-title">처리 내역</h2>
+    <ol class="mt-5 space-y-4 text-sm">
+      <li class="flex gap-3"><span class="mt-1 h-2.5 w-2.5 rounded-full bg-brand-500"></span><div><p class="font-semibold">업로드 시작 (마감 판정 기준 시각)</p><p class="tabular text-muted">{{ sub.started_at|date:"Y-m-d H:i:s" }} · {{ sub.deadline.title|default:"모든 마감 이후" }}</p></div></li>
+      {% if sub.uploaded_at %}<li class="flex gap-3"><span class="mt-1 h-2.5 w-2.5 rounded-full bg-brand-500"></span><div><p class="font-semibold">업로드 완료 · 파일 지문 일치 확인</p><p class="tabular text-muted">{{ sub.uploaded_at|date:"Y-m-d H:i:s" }} · {{ sub.total_bytes|filesizeformat }}</p></div></li>{% endif %}
+      {% if sub.graded_at %}<li class="flex gap-3"><span class="mt-1 h-2.5 w-2.5 rounded-full {% if sub.status == 'graded' %}bg-up{% else %}bg-down{% endif %}"></span><div><p class="font-semibold">{% if sub.status == 'graded' %}채점 완료{% else %}채점 불가{% endif %}</p><p class="tabular text-muted">{{ sub.graded_at|date:"Y-m-d H:i:s" }}</p></div></li>{% endif %}
+    </ol>
+    {% if sub.errors %}
+    <div class="mt-6 rounded-2xl bg-rose-50 p-4">
+      <p class="text-sm font-semibold text-rose-600">오류 {{ sub.errors|length }}건 · 제출 횟수는 차감되지 않았습니다</p>
+      <ul class="mt-2 space-y-1 text-sm text-ink-2">{% for e in sub.errors %}<li>· {{ e.message }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+    {% if sub.comment %}<div class="mt-6 rounded-2xl bg-surface-2 p-4 text-sm"><p class="font-semibold">코멘트</p><p class="mt-1 whitespace-pre-line text-ink-2">{{ sub.comment }}</p></div>{% endif %}
+    {% if review and review.state == "rejected" %}
+    <div class="mt-6 rounded-2xl bg-rose-50 p-4 text-sm"><p class="font-semibold text-rose-600">부적합 판정 — 이 기록은 순위에서 제외되었습니다</p><p class="mt-1 text-ink-2">{{ review.admin2_note|default:review.admin1_note }}</p></div>
+    {% endif %}
+  </section>
+  <section class="card p-6">
+    <h2 class="card-title">제출 파일</h2>
+    <ul class="mt-4 space-y-2 text-sm">
+      <li><a class="flex items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3 hover:bg-brand-50" href="{% url 'submissions:download' sub.pk 'csv' %}">{% include "partials/icon.html" with name="download" cls="h-4 w-4 text-brand-600" %}<span class="badge-slate">CSV</span><span class="truncate">{{ sub.csv_name|default:"-" }}</span></a></li>
+      <li><a class="flex items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3 hover:bg-brand-50" href="{% url 'submissions:download' sub.pk 'notebook' %}">{% include "partials/icon.html" with name="download" cls="h-4 w-4 text-brand-600" %}<span class="badge-slate">노트북</span><span class="truncate">{{ sub.notebook_name|default:"-" }}</span></a></li>
+      <li><a class="flex items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3 hover:bg-brand-50" href="{% url 'submissions:download' sub.pk 'weights' %}">{% include "partials/icon.html" with name="download" cls="h-4 w-4 text-brand-600" %}<span class="badge-slate">{{ sub.weights_format|default:"가중치" }}</span><span class="truncate">{{ sub.weights_name|default:"-" }}</span></a></li>
+    </ul>
+    <p class="mt-4 font-mono text-[11px] leading-relaxed text-faint">CSV SHA-256 {{ sub.declared_hashes.csv|slice:":16" }}…<br>노트북 {{ sub.declared_hashes.notebook|slice:":16" }}… · 가중치 {{ sub.declared_hashes.weights|slice:":16" }}…</p>
+    {% if can_manage and review %}<a class="btn-primary mt-5 w-full" href="{% url 'review:detail' review.pk %}">검토 화면으로</a>{% endif %}
+  </section>
+</div>
+{% endblock %}

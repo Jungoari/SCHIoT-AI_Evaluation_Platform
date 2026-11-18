@@ -1,5 +1,8 @@
 # 발표 자료 구성 가이드
 
+> **현재 상태 (2026-11-19)**: `scripts/build_presentation.py` 로 초안 20장 자동 생성 → `presentation/AI모델_성능평가_자동화_발표.pptx`
+> 시각 점검: `scripts/pptx_preview.py` (LibreOffice 없이 슬라이드를 이미지로 렌더링)
+
 > PPT를 만들 때 참고하는 문서. 템플릿: `~/Desktop/Ubicomp LAB/template.pptx`
 > 좌측 패널 문구의 원본은 [DESIGN_RATIONALE.md](DESIGN_RATIONALE.md), 시각 자료는 [TEST_DEMO_PLAN.md](TEST_DEMO_PLAN.md)의 GIF
 

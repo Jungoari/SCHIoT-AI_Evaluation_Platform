@@ -42,5 +42,5 @@ def client_ident(request) -> str:
     return f"ip{ip}"
 
 
-# 참여 코드: 15분 동안 5회 실패 시 차단
-join_code_limiter = FailureLimiter("joincode", limit=5, window_seconds=15 * 60)
+# 참여 코드: 10회 이상 실패하면 15분간 차단
+join_code_limiter = FailureLimiter("joincode", limit=10, window_seconds=15 * 60)

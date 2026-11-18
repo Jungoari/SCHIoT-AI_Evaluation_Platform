@@ -66,6 +66,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "apps.core.middleware.RequestIdMiddleware",
+    "apps.core.middleware.UploadSizeLimitMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -134,6 +135,7 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
 ]
 
+PASSWORD_RESET_TIMEOUT = 60 * 60 * 24  # 재설정 링크 유효 시간 (1일)
 LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "core:dashboard"
 LOGOUT_REDIRECT_URL = "accounts:login"
@@ -201,6 +203,8 @@ MAX_NOTEBOOK_BYTES = env_int("MAX_NOTEBOOK_BYTES", 30 * 1024 * 1024)
 MAX_WEIGHTS_BYTES = env_int("MAX_WEIGHTS_BYTES", 500 * 1024 * 1024)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 이보다 크면 임시 파일로 스트리밍
+FILE_UPLOAD_TEMP_DIR = None  # 시스템 임시 폴더 사용 (요청 크기는 UploadSizeLimitMiddleware 가 먼저 제한)
+DATA_UPLOAD_MAX_NUMBER_FILES = 10
 
 # 마감 후 업로드 완료까지 허용하는 기본 유예 시간 (분)
 DEFAULT_GRACE_MINUTES = env_int("DEFAULT_GRACE_MINUTES", 30)

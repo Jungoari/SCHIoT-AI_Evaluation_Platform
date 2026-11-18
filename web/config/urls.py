@@ -5,6 +5,10 @@ from django.urls import include, path
 urlpatterns = [
     path("", include("apps.core.urls")),
     path("accounts/", include("apps.accounts.urls")),
+    path("", include("apps.competitions.urls")),
+    path("", include("apps.submissions.urls")),
+    path("", include("apps.leaderboard.urls")),
+    path("", include("apps.review.urls")),
 ]
 
 # Django 기본 관리 화면은 개발 중에만 노출 (운영에서는 관리 인터페이스 공격 면을 줄인다)

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}프로젝트 추가{% endblock %}
+{% block eyebrow %}<p class="mb-1.5 text-sm text-muted">{{ competition.title }}</p>{% endblock %}
+{% block heading %}프로젝트 추가{% endblock %}
+{% block content %}
+<section class="card max-w-3xl p-8">
+  <form method="post" class="space-y-5" novalidate>
+    {% csrf_token %}
+    {% include "partials/field.html" with field=form.title %}
+    {% include "partials/field.html" with field=form.description %}
+    <div class="grid gap-5 sm:grid-cols-2">
+      {% include "partials/field.html" with field=form.metric %}
+      {% include "partials/field.html" with field=form.direction %}
+      {% include "partials/field.html" with field=form.decimals %}
+      {% include "partials/field.html" with field=form.grace_minutes %}
+    </div>
+    <button class="btn-primary w-full py-3">다음: 테스트셋 · 마감일 설정</button>
+  </form>
+</section>
+{% endblock %}

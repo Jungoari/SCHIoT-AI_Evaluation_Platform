@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}참여 코드{% endblock %}
+{% block heading %}{% if created %}대회를 개설했습니다{% else %}참여 코드를 재발급했습니다{% endif %}{% endblock %}
+{% block actions %}<a href="{% url 'competitions:detail' competition.pk %}" class="btn-primary">대회 홈으로 {% include "partials/icon.html" with name="arrow-right" cls="h-4 w-4" %}</a>{% endblock %}
+{% block content %}
+<div class="card mb-6 flex items-center gap-3 px-5 py-4 text-sm">
+  <span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span>
+  <span><b>이 화면을 벗어나면 코드를 다시 볼 수 없습니다.</b> 코드는 비밀번호처럼 해시로만 저장됩니다. 분실하면 재발급하세요 (기존 코드는 즉시 무효)</span>
+</div>
+<div class="grid gap-5 md:grid-cols-2">
+  {% if codes.participant %}
+  <section class="card p-7">
+    <p class="card-title">참여자 코드</p>
+    <p class="mt-1 text-sm text-muted">학생에게 공유 — 가입 시 입력하면 참여자로 등록</p>
+    <div class="mt-5 flex items-center gap-3">
+      <code class="flex-1 rounded-2xl bg-surface-2 px-5 py-4 text-center font-mono text-2xl font-bold tracking-[0.2em]" data-testid="participant-code">{{ codes.participant }}</code>
+      <button type="button" class="btn-secondary" data-copy="{{ codes.participant }}">복사</button>
+    </div>
+  </section>
+  {% endif %}
+  {% if codes.admin1 %}
+  <section class="card p-7">
+    <p class="card-title">운영(관리자1) 코드</p>
+    <p class="mt-1 text-sm text-muted">조교에게만 공유 — 입력하면 관리자1로 등록</p>
+    <div class="mt-5 flex items-center gap-3">
+      <code class="flex-1 rounded-2xl bg-surface-2 px-5 py-4 text-center font-mono text-2xl font-bold tracking-[0.2em]" data-testid="admin1-code">{{ codes.admin1 }}</code>
+      <button type="button" class="btn-secondary" data-copy="{{ codes.admin1 }}">복사</button>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

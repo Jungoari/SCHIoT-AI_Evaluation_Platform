@@ -1,20 +1,39 @@
 {% load static %}
 {% with path=request.path %}
-<aside class="sticky top-0 hidden h-screen w-[260px] shrink-0 flex-col bg-surface px-5 py-8 lg:flex">
-  <a href="{% url 'core:dashboard' %}" class="flex items-center gap-3 px-3">
-    <img src="{% static 'img/logo.svg' %}" alt="" class="h-9 w-9">
-    <span class="text-xl font-extrabold tracking-tight">{{ SITE_NAME }}</span>
-  </a>
+<aside class="sticky top-0 hidden h-screen w-[260px] shrink-0 flex-col overflow-y-auto bg-surface px-5 py-8 *:shrink-0 lg:flex">
+  <div class="px-3">{% include "partials/brand.html" %}</div>
 
-  <nav class="mt-10 flex flex-col gap-1.5">
+  <nav class="mt-8 flex flex-col gap-1.5">
     <a href="{% url 'core:dashboard' %}" class="{% if path == '/dashboard/' %}nav-item-active{% else %}nav-item{% endif %}">
       {% include "partials/icon.html" with name="chart" %}대시보드
     </a>
     <a href="{% url 'accounts:join' %}" class="{% if path == '/accounts/join/' %}nav-item-active{% else %}nav-item{% endif %}">
       {% include "partials/icon.html" with name="ticket" %}대회 추가
     </a>
-    {% block sidebar_nav %}{% endblock %}
   </nav>
+
+  {% if competition %}
+  <p class="nav-section truncate" title="{{ competition.title }}">{{ competition.title }}</p>
+  <nav class="flex flex-col gap-1">
+    <a href="{% url 'competitions:detail' competition.pk %}" class="{% if path == '/c/'|add:competition.pk|stringformat:'s'|add:'/' %}nav-item-active{% else %}nav-item{% endif %}">
+      {% include "partials/icon.html" with name="trophy" %}대회 홈
+    </a>
+    {% for p in nav_projects %}
+    <a href="{% url 'competitions:project_detail' p.pk %}" class="{% if project and project.pk == p.pk %}nav-item-active{% else %}nav-item{% endif %} text-[14px]">
+      {% include "partials/icon.html" with name="folder" %}<span class="truncate">{{ p.title }}</span>
+      {% if not p.is_published %}<span class="badge-slate ml-auto">비공개</span>{% endif %}
+    </a>
+    {% endfor %}
+    {% if can_manage %}
+    <a href="{% url 'competitions:members' competition.pk %}" class="{% if '/members/' in path %}nav-item-active{% else %}nav-item{% endif %}">
+      {% include "partials/icon.html" with name="users" %}회원 관리
+    </a>
+    <a href="{% url 'competitions:audit' competition.pk %}" class="{% if '/audit/' in path %}nav-item-active{% else %}nav-item{% endif %}">
+      {% include "partials/icon.html" with name="shield" %}감사 로그
+    </a>
+    {% endif %}
+  </nav>
+  {% endif %}
 
   <p class="nav-section">계정</p>
   <div class="flex flex-col gap-1.5">

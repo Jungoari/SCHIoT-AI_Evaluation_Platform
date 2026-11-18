@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}최종 성적 · {{ project.title }}{% endblock %}
+{% block eyebrow %}<p class="mb-1.5 text-sm text-muted">{{ competition.title }} · {{ project.title }}</p>{% endblock %}
+{% block heading %}최종 성적{% endblock %}
+{% block actions %}
+<a href="{% url 'review:queue' project.pk %}" class="btn-secondary">검토 큐</a>
+<a href="{% url 'competitions:results_export' project.pk %}" class="btn-primary">{% include "partials/icon.html" with name="download" cls="h-4 w-4" %}CSV 내보내기</a>
+{% endblock %}
+{% block content %}
+<section class="grid grid-cols-2 gap-4 xl:grid-cols-3">
+  <div class="stat"><p class="stat-label">성적 확정</p><p class="stat-value">{{ confirmed }}<span class="stat-sub">/{{ rows|length }}</span></p></div>
+  <div class="stat"><p class="stat-label">확정 진행률</p>
+    <div class="mt-4 flex items-center gap-3"><div class="progress-high flex-1"><span style="width:{% widthratio confirmed rows|length|default:1 100 %}%"></span></div><span class="text-sm font-bold tabular">{% widthratio confirmed rows|length|default:1 100 %}%</span></div></div>
+  <div class="stat"><p class="stat-label">미확정</p><p class="stat-value">{{ pending }}</p></div>
+</section>
+<section class="card mt-6 overflow-hidden">
+  <div class="px-6 pt-6"><h2 class="card-title">참여자별 대표 기록</h2></div>
+  <div class="mt-3 overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>최종 순위</th><th>참여자</th><th>학번</th><th class="text-right">점수</th><th>상태</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+    <tr>
+      <td class="text-lg font-bold tabular">{{ r.rank|default:"-" }}</td>
+      <td class="font-semibold">{{ r.user.name }}</td>
+      <td class="tabular text-muted">{{ r.user.student_no|default:"-" }}</td>
+      <td class="text-right font-bold tabular">{{ r.submission.score|score:project.decimals }}</td>
+      <td>{% if r.review %}{% review_badge r.review.state %}{% else %}{% review_badge "pending" %}{% endif %}</td>
+      <td class="text-right">{% if r.review %}<a class="link text-sm" href="{% url 'review:detail' r.review.pk %}">검토</a>{% endif %}</td>
+    </tr>
+    {% empty %}<tr><td colspan="6" class="py-12 text-center text-muted">채점된 기록이 없습니다</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+<p class="mt-3 text-xs text-muted">검증 통과된 대표 기록끼리 최종 순위를 매깁니다 (동점 공동 순위). 내보낸 CSV는 엑셀 수식 주입이 방지됩니다</p>
+{% endblock %}

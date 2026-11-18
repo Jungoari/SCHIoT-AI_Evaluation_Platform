@@ -1,0 +1,102 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}{{ competition.title }}{% endblock %}
+{% block eyebrow %}<p class="mb-1.5 text-sm text-muted">대회 · 권한: <span class="font-semibold text-brand-600">({{ role_label }})</span></p>{% endblock %}
+{% block heading %}{{ competition.title }}{% endblock %}
+{% block actions %}
+{% if is_admin2 %}<a href="{% url 'competitions:project_create' competition.pk %}" class="btn-primary">{% include "partials/icon.html" with name="plus" cls="h-4 w-4" %}프로젝트 추가</a>{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if competition.description %}<p class="-mt-2 mb-6 max-w-3xl text-[15px] text-ink-2">{{ competition.description }}</p>{% endif %}
+
+{% if can_manage %}
+<section class="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
+  <div class="stat"><p class="stat-label">참여자</p><p class="stat-value">{{ member_counts.participants }}<span class="stat-sub"> 명</span></p></div>
+  <div class="stat"><p class="stat-label">관리자1</p><p class="stat-value">{{ member_counts.admins }}<span class="stat-sub"> 명</span></p></div>
+  <div class="stat"><p class="stat-label">프로젝트</p><p class="stat-value">{{ projects|length }}</p></div>
+  <div class="stat">
+    <p class="stat-label">채점 대기열</p>
+    {% if queue.mode == "eager" %}<p class="stat-value text-[18px]">즉시 실행 모드</p>
+    {% elif queue.error %}<p class="stat-value text-[18px] text-down">연결 오류</p>
+    {% else %}<p class="stat-value">{{ queue.grading.queued }}<span class="stat-sub"> 대기 · 실패 {{ queue.grading.failed }}</span></p>{% endif %}
+  </div>
+</section>
+{% endif %}
+
+<div class="grid gap-6 {% if can_manage %}xl:grid-cols-[1.6fr_1fr]{% endif %}">
+  <section class="space-y-4">
+    {% for item in projects %}
+    {% with p=item.project %}
+    <article class="card p-6">
+      <div class="flex flex-wrap items-start gap-4">
+        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-100 text-brand-600">{% include "partials/icon.html" with name="folder" cls="h-6 w-6" %}</div>
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class="text-lg font-bold">{{ p.title }}</h2>
+            {% if not p.is_published %}<span class="badge-slate">비공개</span>{% endif %}
+            <span class="badge-blue">{{ item.metric.label }} {% if p.higher_is_better %}↑{% else %}↓{% endif %}</span>
+          </div>
+          <p class="mt-1 text-sm text-muted">
+            {% if item.next_deadline %}다음 마감 {{ item.next_deadline.due_at|date:"n월 j일 H:i" }} · {{ item.next_deadline.title }}{% else %}모든 마감 종료{% endif %}
+          </p>
+        </div>
+        <div class="flex gap-2">
+          <a href="{% url 'leaderboard:page' p.pk %}" class="btn-secondary">리더보드</a>
+          <a href="{% url 'competitions:project_detail' p.pk %}" class="btn-primary">{% if role == "participant" %}제출하기{% else %}열기{% endif %}</a>
+        </div>
+      </div>
+      {% if role == "participant" %}
+      <div class="mt-5 grid grid-cols-3 gap-3 text-sm">
+        <div class="rounded-2xl bg-surface-2 p-4"><p class="text-muted">남은 제출</p><p class="mt-1 text-xl font-bold tabular">{% if item.quota.current %}{{ item.quota.current.remaining }}<span class="text-sm font-semibold text-faint">/{{ item.quota.current.deadline.max_submissions }}</span>{% else %}-{% endif %}</p></div>
+        <div class="rounded-2xl bg-surface-2 p-4"><p class="text-muted">내 최고 점수</p><p class="mt-1 text-xl font-bold tabular">{{ item.best.score|score:p.decimals }}</p></div>
+        <div class="rounded-2xl bg-surface-2 p-4"><p class="text-muted">마감까지</p><p class="mt-1 text-xl font-bold">{% if item.next_deadline %}{{ item.next_deadline.due_at|timeuntil }}{% else %}-{% endif %}</p></div>
+      </div>
+      {% elif can_manage %}
+      <div class="mt-5 flex flex-wrap gap-2 text-sm">
+        <span class="badge-slate">제출 {{ item.submission_count }}건</span>
+        <a class="link" href="{% url 'review:queue' p.pk %}">검토 큐</a><span class="text-faint">·</span>
+        <a class="link" href="{% url 'review:results' p.pk %}">최종 성적</a>
+        {% if is_admin2 %}<span class="text-faint">·</span><a class="link" href="{% url 'competitions:project_settings' p.pk %}">설정</a>{% endif %}
+      </div>
+      {% endif %}
+    </article>
+    {% endwith %}
+    {% empty %}
+    <div class="card flex flex-col items-center px-6 py-16 text-center">
+      <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100 text-brand-600">{% include "partials/icon.html" with name="folder" cls="h-7 w-7" %}</div>
+      <p class="mt-5 text-lg font-bold">{% if is_admin2 %}첫 프로젝트를 추가하세요{% else %}아직 공개된 프로젝트가 없습니다{% endif %}</p>
+      <p class="mt-1.5 text-sm text-muted">{% if is_admin2 %}테스트셋을 올리면 CSV 규격을 자동으로 추론합니다{% else %}관리자가 프로젝트를 공개하면 여기에 표시됩니다{% endif %}</p>
+      {% if is_admin2 %}<a href="{% url 'competitions:project_create' competition.pk %}" class="btn-primary mt-6">프로젝트 추가</a>{% endif %}
+    </div>
+    {% endfor %}
+  </section>
+
+  {% if can_manage %}
+  <aside class="space-y-6">
+    <section class="card p-6">
+      <div class="flex items-center justify-between"><h2 class="card-title">참여 코드</h2><a class="text-sm font-semibold text-brand-600" href="{% url 'competitions:members' competition.pk %}">회원 관리</a></div>
+      <ul class="mt-4 space-y-3">
+        {% for code in codes %}
+        <li class="flex items-center gap-3">
+          <span class="{% if code.role == 'admin1' %}badge-blue{% else %}badge-slate{% endif %}">{{ code.get_role_display }}</span>
+          <span class="flex-1 font-mono text-sm text-muted">••••-••••-{{ code.code_hint }}</span>
+          {% if is_admin2 %}
+          <form method="post" action="{% url 'competitions:code_reissue' competition.pk %}">{% csrf_token %}<input type="hidden" name="role" value="{{ code.role }}"><button class="btn-ghost px-3 py-1.5 text-xs">재발급</button></form>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      <p class="mt-4 text-xs text-muted">코드는 해시로만 저장되어 끝 4자리만 표시됩니다</p>
+    </section>
+    <section class="card p-6">
+      <div class="flex items-center justify-between"><h2 class="card-title">최근 활동</h2><a class="text-sm font-semibold text-brand-600" href="{% url 'competitions:audit' competition.pk %}">감사 로그</a></div>
+      <ul class="mt-4 space-y-3 text-sm">
+        {% for log in recent_logs %}
+        <li><p class="font-medium">{{ log.summary }}</p><p class="text-xs text-muted">{{ log.actor.name|default:"시스템" }} · {{ log.created_at|date:"m-d H:i" }}</p></li>
+        {% empty %}<li class="text-muted">기록이 없습니다</li>{% endfor %}
+      </ul>
+    </section>
+  </aside>
+  {% endif %}
+</div>
+{% endblock %}

@@ -44,6 +44,32 @@ class RequestIdMiddleware:
         return response
 
 
+class UploadSizeLimitMiddleware:
+    """
+    업로드 요청의 전체 크기가 허용 상한(CSV + 노트북 + 가중치 + 여유 1MB)을 넘으면
+    본문을 읽기 전에 413 으로 거부한다 → 거대한 요청으로 디스크·메모리를 고갈시키는 공격 차단
+    """
+
+    def __init__(self, get_response):
+        from django.conf import settings
+
+        self.get_response = get_response
+        self.limit = settings.MAX_CSV_BYTES + settings.MAX_NOTEBOOK_BYTES + settings.MAX_WEIGHTS_BYTES + 1024 * 1024
+        self.default_limit = self.limit  # 관리자 배포 파일도 같은 상한 (가중치 최대 크기 기준)
+
+    def __call__(self, request):
+        from django.http import JsonResponse
+
+        try:
+            length = int(request.META.get("CONTENT_LENGTH") or 0)
+        except ValueError:
+            length = 0
+        limit = self.limit if request.path.startswith("/s/") else self.default_limit
+        if length > limit:
+            return JsonResponse({"ok": False, "error": f"요청이 너무 큽니다 (최대 {limit // (1024 * 1024)}MB)"}, status=413)
+        return self.get_response(request)
+
+
 class SecurityHeadersMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response

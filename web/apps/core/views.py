@@ -46,7 +46,44 @@ def dashboard(request):
         "upcoming": Deadline.objects.filter(project__in=projects, due_at__gte=now).count(),
         "my_submissions": Submission.objects.filter(user=user).count(),
     }
-    return render(request, "core/dashboard.html", {"cards": cards, "upcoming": upcoming, "stats": stats, "now": now})
+    return render(
+        request,
+        "core/dashboard.html",
+        {"cards": cards, "upcoming": upcoming, "stats": stats, "now": now, "role_label": role_label(user),
+         "todos": admin_todos(user, competitions)},
+    )
+
+
+def admin_todos(user, competitions) -> list[dict]:
+    """관리자 첫 화면의 '지금 할 일': 프로젝트별 검토 대기(관리자1)·승인 대기(관리자2)·미공개 설정"""
+    from apps.review.services import queue
+
+    todos = []
+    for comp in competitions:
+        if not permissions.can_manage_competition(user, comp):
+            continue
+        for project in comp.projects.all():
+            if not project.is_published:
+                if permissions.is_admin2(user):
+                    todos.append({"kind": "setup", "project": project, "count": None})
+                continue
+            reviews = queue(project)
+            pending = sum(1 for r in reviews if r.state == "pending")
+            proposed = sum(1 for r in reviews if r.state == "proposed")
+            if pending:
+                todos.append({"kind": "review", "project": project, "count": pending})
+            if proposed and permissions.can_approve(user, comp):
+                todos.append({"kind": "approve", "project": project, "count": proposed})
+    return todos
+
+
+def role_label(user) -> str:
+    """현재 계정의 권한 표시 (대회마다 역할이 다를 수 있어 모두 나열)"""
+    if permissions.is_admin2(user):
+        return "관리자2 · 총괄"
+    roles = {m.get_role_display() for m in user.memberships.filter(is_active=True)}
+    order = ["관리자1", "참여자"]
+    return " · ".join(r for r in order if r in roles) or "소속 대회 없음"
 
 
 def healthz(request):

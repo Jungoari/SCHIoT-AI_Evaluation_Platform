@@ -20,6 +20,7 @@ x-app: &app
   image: evalplatform-web:latest
   env_file: .env
   environment:
+    RQ_EAGER: "false"
     POSTGRES_HOST: db
     POSTGRES_PORT: "5432"
     REDIS_URL: redis://redis:6379/0
@@ -42,7 +43,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "127.0.0.1:55432:5432"   # 로컬 개발용 (외부 비노출)
+      - "127.0.0.1:${DB_PORT:-55432}:5432"   # 로컬 개발용 (외부 비노출)
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -56,7 +57,7 @@ services:
     volumes:
       - redisdata:/data
     ports:
-      - "127.0.0.1:56379:6379"   # 로컬 개발용 (외부 비노출)
+      - "127.0.0.1:${REDIS_PORT:-56379}:6379"   # 로컬 개발용 (외부 비노출)
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -88,7 +89,11 @@ services:
   sandbox-worker:
     <<: *app
     command: ["/app/entrypoint.sh", "worker", "sandbox"]
+    # Docker 소켓으로 샌드박스 컨테이너를 띄워야 하므로 root 로 실행한다.
+    # 대신 이 워커에는 정답 볼륨이 없고, 웹 포트도 없으며, 참여자 코드는 별도의 격리 컨테이너에서만 실행된다.
+    user: "0:0"
     environment:
+      RQ_EAGER: "false"
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
       REDIS_URL: redis://redis:6379/0
@@ -101,6 +106,15 @@ services:
       - ${SANDBOX_HOST_WORK_ROOT:-/tmp/evalplatform-sandbox}:/data/sandbox
       # 형제 컨테이너 실행용. 이 워커에는 정답 볼륨이 없다
       - /var/run/docker.sock:/var/run/docker.sock
+
+  # 샌드박스 이미지 빌드 전용 (실행되지 않음). docker compose up --build 시 함께 빌드된다
+  sandbox-image:
+    build:
+      context: ./sandbox
+    image: evalplatform-sandbox:latest
+    entrypoint: ["true"]
+    restart: "no"
+    network_mode: none
 
 volumes:
   pgdata:

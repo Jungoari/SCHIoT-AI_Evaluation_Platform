@@ -169,6 +169,13 @@ class Project(models.Model):
         return f"{self.competition} / {self.title}"
 
     @property
+    def metric_label(self) -> str:
+        from apps.grading.metrics import METRICS
+
+        m = METRICS.get(self.metric)
+        return m.label if m else self.metric
+
+    @property
     def is_ready(self) -> bool:
         """정답·규격·마감일이 모두 준비됐는지"""
         return bool(self.label_file and self.id_column and self.target_column and self.deadlines.exists())

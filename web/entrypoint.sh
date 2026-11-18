@@ -17,6 +17,8 @@ case "$1" in
     ;;
   worker)
     shift
+    # 이전 워커가 비정상 종료되어 멈춘 채점 작업 복구
+    if [ "$1" = "grading" ]; then python manage.py recover_stuck --minutes 1 || true; fi
     exec python manage.py rqworker "$@" --with-scheduler
     ;;
   *)

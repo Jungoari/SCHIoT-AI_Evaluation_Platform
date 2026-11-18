@@ -1,0 +1,38 @@
+{% load ui %}
+<div id="lb-table" hx-get="{% url 'leaderboard:table' project.pk %}" hx-trigger="every 30s" hx-swap="outerHTML">
+  {% if rows %}
+  <ul>
+    {% for r in rows %}
+    <li class="flex items-center gap-4 px-6 py-4 {% if not forloop.first %}divider{% endif %} {% if me and r.user_id == me.user_id %}bg-brand-50/70{% endif %}" data-testid="lb-row">
+      <span class="w-8 text-center text-lg font-bold tabular {% if r.rank <= 3 %}text-brand-600{% endif %}">{{ r.rank }}</span>
+      {% if show_names %}
+      <span class="avatar bg-gradient-to-br {{ r.user_id|avatar_color }}">{{ r.name|initials }}</span>
+      <div class="min-w-0 flex-1">
+        <p class="truncate text-[15px] font-semibold">{{ r.name }} <span class="text-sm font-normal text-muted">{{ r.student_no }}</span></p>
+        <p class="truncate text-sm text-muted">{{ r.alias }} · {{ r.attempts }}회 채점 · {{ r.submission.started_at|date:"m-d H:i" }}</p>
+      </div>
+      {% else %}
+      <span class="avatar bg-gradient-to-br {{ r.alias|avatar_color }}">{{ r.alias|initials }}</span>
+      <div class="min-w-0 flex-1">
+        <p class="truncate text-[15px] font-semibold">{% if me and r.user_id == me.user_id %}나 <span class="text-sm font-normal text-muted">({{ r.alias }})</span>{% else %}{{ r.alias }}{% endif %}</p>
+        <p class="truncate text-sm text-muted">{{ r.attempts }}회 채점</p>
+      </div>
+      {% endif %}
+      <span class="hidden sm:inline">{% review_badge r.state %}</span>
+      <span class="w-24 text-right text-[17px] font-bold tabular">{{ r.score_text }}</span>
+      <span class="flex w-12 items-center justify-end gap-1.5 text-xs font-semibold tabular">
+        {% if r.change is None %}<span class="badge-blue px-1.5 py-0">NEW</span>
+        {% elif r.change > 0 %}<span class="text-emerald-600">{{ r.change_abs }}</span><span class="rank-up"></span>
+        {% elif r.change < 0 %}<span class="text-rose-600">{{ r.change_abs }}</span><span class="rank-down"></span>
+        {% else %}<span class="rank-same"></span>{% endif %}
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="flex flex-col items-center px-6 py-16 text-center">
+    {% include "partials/icon.html" with name="trophy" cls="h-9 w-9 text-faint" %}
+    <p class="mt-3 text-sm text-muted">아직 채점된 제출이 없습니다</p>
+  </div>
+  {% endif %}
+</div>

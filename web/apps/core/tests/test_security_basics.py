@@ -30,3 +30,26 @@ def test_dashboard_requires_login(client):
 def test_logout_requires_post(client, participant):
     client.force_login(participant)
     assert client.get(reverse("accounts:logout")).status_code == 405
+
+
+@pytest.mark.django_db
+def test_dashboard_shows_account_and_role(client, admin2, admin1, participant):
+    for user, label in [(admin2, "(관리자2 · 총괄)"), (admin1, "(관리자1)"), (participant, "(참여자)")]:
+        client.force_login(user)
+        html = client.get(reverse("core:dashboard")).content.decode()
+        assert "현재 로그인 계정" in html and user.name in html and label in html
+
+
+@pytest.mark.django_db
+def test_oversized_upload_rejected_before_reading(client, participant, settings):
+    client.force_login(participant)
+    res = client.generic("POST", "/s/00000000-0000-0000-0000-000000000000/upload/", data=b"",
+                         CONTENT_LENGTH=str(2 * 1024 ** 3), content_type="multipart/form-data; boundary=x")
+    assert res.status_code == 413
+
+
+def test_external_images_removed_from_notebook_html():
+    from apps.review.notebook import sanitize_html
+
+    out = sanitize_html('<img src="https://evil.example/track.png"><img src="data:image/png;base64,iVBORw0KGgo=">')
+    assert "evil.example" not in out and "data:image/png" in out
