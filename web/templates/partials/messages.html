@@ -1,0 +1,12 @@
+{% if messages %}
+<div class="mb-6 space-y-2" data-autodismiss>
+  {% for message in messages %}
+  <div class="card flex items-center gap-3 px-5 py-3.5 text-sm font-medium">
+    {% if message.tags == 'error' %}<span class="h-2.5 w-2.5 rounded-full bg-down"></span>
+    {% elif message.tags == 'warning' %}<span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span>
+    {% else %}<span class="h-2.5 w-2.5 rounded-full bg-up"></span>{% endif %}
+    <span>{{ message }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

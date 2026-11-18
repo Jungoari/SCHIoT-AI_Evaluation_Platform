@@ -1,0 +1,16 @@
+{
+  "name": "evalhub-web",
+  "version": "1.0.0",
+  "scripts": {
+    "css:build": "tailwindcss -i ./assets/app.css -o ./static/css/app.css --minify",
+    "css:watch": "tailwindcss -i ./assets/app.css -o ./static/css/app.css --watch"
+  },
+  "type": "commonjs",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.17",
+    "htmx.org": "^2.0.8",
+    "pretendard": "^1.3.9",
+    "tailwindcss": "^4.1.17"
+  },
+  "private": true
+}

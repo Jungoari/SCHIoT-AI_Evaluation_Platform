@@ -1,0 +1,242 @@
+/*
+ * EvalHub 디자인 시스템 — "Analytics Dashboard" 스타일 기반
+ *  - 흰 사이드바 + 연회색 작업 영역 + 테두리 없는 둥근 흰 카드(부드러운 그림자)
+ *  - 주색: 선명한 파랑 (막대 차트·활성 메뉴)
+ *  - 진행 바: 낮음 = 주황→분홍 그라데이션, 높음 = 초록 그라데이션
+ *  - 순위 변화: 상승 ▲ 초록 / 하락 ▼ 빨강
+ *  - 상태 색은 모든 화면에서 동일: 대기 slate · 검토 중 blue · 통과 green · 부적합 red · 채점 제외 amber
+ */
+@import "tailwindcss";
+
+@source "../templates";
+@source "../apps";
+@source "../static/js";
+
+@font-face {
+  font-family: "Pretendard Variable";
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+  src: url("../fonts/PretendardVariable.woff2") format("woff2-variations");
+}
+
+@theme {
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo",
+    "Noto Sans KR", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* 주색 (파랑) */
+  --color-brand-50: #f0f5ff;
+  --color-brand-100: #e3ebfd;
+  --color-brand-200: #c9d8fb;
+  --color-brand-300: #9db8f8;
+  --color-brand-400: #6c93f8;
+  --color-brand-500: #4a7cf6;
+  --color-brand-600: #2f63ea;
+  --color-brand-700: #1e4fd0;
+  --color-brand-800: #1b3f9e;
+  --color-brand-900: #15306f;
+
+  /* 의미 토큰 */
+  --color-canvas: #f5f6f8; /* 작업 영역 배경 */
+  --color-surface: #ffffff; /* 카드·사이드바 */
+  --color-surface-2: #f3f5f9; /* 카드 안 보조 영역 */
+  --color-track: #eef3fe; /* 막대 차트 빈 트랙 */
+  --color-ink: #111111; /* 제목·숫자 */
+  --color-ink-2: #3d3d3d; /* 본문 */
+  --color-muted: #7a7a7a; /* 라벨·보조 문구 */
+  --color-faint: #a9a9a9;
+  --color-line: #e7e8ec; /* 구분선 */
+
+  --color-up: #22d39a; /* 순위 상승 */
+  --color-down: #f2462e; /* 순위 하락 */
+
+  --radius-card: 20px;
+  --shadow-card: 0 1px 2px rgba(17, 17, 17, 0.03), 0 8px 24px -12px rgba(17, 17, 17, 0.08);
+  --shadow-pop: 0 12px 32px -12px rgba(17, 17, 17, 0.18);
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    @apply bg-canvas text-ink font-sans;
+  }
+}
+
+/* 숫자 폭 고정 (점수·순위 열 정렬) */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------- 레이아웃 ---------------- */
+@utility nav-item {
+  @apply flex items-center gap-3.5 rounded-xl px-4 py-3 text-[15px] font-medium text-ink-2 transition hover:bg-surface-2;
+}
+@utility nav-item-active {
+  @apply nav-item bg-brand-100 text-brand-600 hover:bg-brand-100;
+}
+@utility nav-section {
+  @apply px-4 pt-8 pb-2 text-[15px] font-medium text-muted;
+}
+
+/* ---------------- 카드 ---------------- */
+@utility card {
+  @apply bg-surface rounded-[var(--radius-card)] shadow-[var(--shadow-card)];
+}
+@utility card-title {
+  @apply text-[15px] font-medium text-muted;
+}
+/* 통계 카드: 라벨 + 큰 숫자 */
+@utility stat {
+  @apply card flex flex-col p-5;
+}
+@utility stat-label {
+  @apply text-sm font-medium text-ink-2;
+}
+@utility stat-value {
+  @apply mt-4 text-[26px] leading-none font-bold tracking-tight text-ink tabular;
+}
+@utility stat-sub {
+  @apply text-base font-semibold text-faint;
+}
+
+/* ---------------- 버튼 ---------------- */
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition
+    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-brand-600 text-white shadow-[0_6px_16px_-6px_rgba(47,99,234,0.55)] hover:bg-brand-700;
+}
+@utility btn-secondary {
+  @apply btn bg-surface text-ink shadow-[var(--shadow-card)] ring-1 ring-line hover:bg-surface-2;
+}
+@utility btn-ghost {
+  @apply btn text-ink-2 hover:bg-surface-2;
+}
+@utility btn-danger {
+  @apply btn bg-down text-white hover:brightness-95;
+}
+@utility btn-success {
+  @apply btn bg-emerald-500 text-white hover:bg-emerald-600;
+}
+
+/* ---------------- 폼 ---------------- */
+@utility label {
+  @apply mb-1.5 block text-sm font-semibold text-ink-2;
+}
+@utility input {
+  @apply block w-full rounded-2xl border border-line bg-surface px-4 py-3 text-[15px] text-ink placeholder:text-faint
+    transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 focus:outline-none;
+}
+@utility help {
+  @apply mt-1.5 text-xs text-muted;
+}
+@utility field-error {
+  @apply mt-1.5 text-xs font-medium text-down;
+}
+/* 필터 드롭다운 (디자인의 "Timeframe: All-time" 알약형) */
+@utility filter {
+  @apply flex items-center justify-between gap-2 rounded-2xl bg-surface px-4 py-3 text-[15px] text-ink-2 shadow-[var(--shadow-card)] ring-1 ring-line/70;
+}
+
+/* ---------------- 배지 ---------------- */
+@utility badge {
+  @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap;
+}
+@utility badge-slate {
+  @apply badge bg-slate-100 text-slate-600;
+}
+@utility badge-blue {
+  @apply badge bg-brand-100 text-brand-700;
+}
+@utility badge-green {
+  @apply badge bg-emerald-50 text-emerald-700;
+}
+@utility badge-red {
+  @apply badge bg-rose-50 text-rose-600;
+}
+@utility badge-amber {
+  @apply badge bg-amber-50 text-amber-700;
+}
+@utility badge-brand {
+  @apply badge bg-brand-600 text-white;
+}
+
+/* ---------------- 진행 바 (디자인의 Weakest/Strongest Topics) ---------------- */
+@utility progress {
+  @apply h-2 w-full overflow-hidden rounded-full;
+}
+@utility progress-low {
+  @apply progress bg-[#fde8e8];
+  & > span {
+    @apply block h-full rounded-full bg-gradient-to-r from-[#f8a54a] to-[#f2506e];
+  }
+}
+@utility progress-high {
+  @apply progress bg-[#dcf8ee];
+  & > span {
+    @apply block h-full rounded-full bg-gradient-to-r from-[#62de88] to-[#2fd3a0];
+  }
+}
+@utility progress-blue {
+  @apply progress bg-track;
+  & > span {
+    @apply block h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-600;
+  }
+}
+
+/* ---------------- 막대 차트 (디자인의 Activity) ---------------- */
+@utility bar-track {
+  @apply relative flex h-full w-3 items-end overflow-hidden rounded-full bg-track;
+  & > span {
+    @apply block w-full rounded-full bg-gradient-to-b from-brand-400 to-brand-600 shadow-[0_4px_10px_-4px_rgba(47,99,234,0.6)];
+  }
+}
+
+/* ---------------- 순위 표시 ---------------- */
+@utility rank-up {
+  @apply inline-block h-0 w-0 border-x-[7px] border-b-[11px] border-x-transparent border-b-up;
+}
+@utility rank-down {
+  @apply inline-block h-0 w-0 border-x-[7px] border-t-[11px] border-x-transparent border-t-down;
+}
+@utility rank-same {
+  @apply inline-block h-1 w-3 rounded-full bg-faint/60;
+}
+/* 이니셜 아바타 */
+@utility avatar {
+  @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white;
+}
+
+/* ---------------- 기타 ---------------- */
+@utility kbd {
+  @apply inline-flex min-w-5 items-center justify-center rounded-md bg-surface-2 px-1.5 text-[11px] font-semibold text-ink-2 ring-1 ring-line;
+}
+@utility link {
+  @apply font-semibold text-brand-600 underline-offset-4 hover:underline;
+}
+@utility divider {
+  @apply border-t border-line;
+}
+
+@layer components {
+  /* 표 (테두리 최소화, 카드 안에서 사용) */
+  .table {
+    @apply w-full text-sm;
+  }
+  .table thead th {
+    @apply px-5 py-3 text-left text-[13px] font-medium text-muted;
+  }
+  .table tbody td {
+    @apply border-t border-line px-5 py-4;
+  }
+  .table tbody tr {
+    @apply transition-colors hover:bg-surface-2/70;
+  }
+}

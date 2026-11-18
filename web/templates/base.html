@@ -1,0 +1,38 @@
+{% load static %}<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false, "allowEval": false, "selfRequestsOnly": true}'>
+  <title>{% block title %}{{ SITE_NAME }}{% endblock %} · {{ SITE_NAME }}</title>
+  <link rel="icon" href="{% static 'img/logo.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'vendor/htmx-2.0.8.min.js' %}" defer></script>
+  <script src="{% static 'js/app.js' %}" defer></script>
+  {% block head %}{% endblock %}
+</head>
+<body class="min-h-screen" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  {% block body %}
+  <div class="flex min-h-screen">
+    {% include "partials/sidebar.html" %}
+    <div class="flex min-w-0 flex-1 flex-col">
+      {% include "partials/mobile_bar.html" %}
+      <main class="mx-auto w-full max-w-[1280px] flex-1 px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
+        {% block page_header %}
+        <header class="flex flex-wrap items-center justify-between gap-4 pb-6">
+          <div>
+            {% block eyebrow %}{% endblock %}
+            <h1 class="text-[28px] font-bold tracking-tight">{% block heading %}{% endblock %}</h1>
+          </div>
+          <div class="flex items-center gap-2">{% block actions %}{% endblock %}</div>
+        </header>
+        <div class="divider mb-7"></div>
+        {% endblock %}
+        {% include "partials/messages.html" %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+  {% endblock %}
+</body>
+</html>

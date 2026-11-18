@@ -1,0 +1,25 @@
+{% extends "accounts/_auth_layout.html" %}
+{% block title %}로그인{% endblock %}
+{% block form %}
+<h2 class="text-[26px] font-bold tracking-tight">로그인</h2>
+<p class="mt-2 text-sm text-muted">계정이 없나요? <a class="link" href="{% url 'accounts:signup' %}">참여 코드로 가입하기</a></p>
+
+<form method="post" class="mt-8 space-y-5" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+  <div class="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-medium text-down">
+    {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+  </div>
+  {% endif %}
+  {% include "partials/field.html" with field=form.username %}
+  {% include "partials/field.html" with field=form.password %}
+  <input type="hidden" name="next" value="{{ next }}">
+  <button type="submit" class="btn-primary w-full py-3">로그인</button>
+</form>
+
+{% endblock %}
+{% block below_card %}
+{% if DEMO_MODE %}
+<p class="mt-5 text-center text-xs text-muted">데모 모드 · 역할별 데모 계정은 README의 "빠른 시작"을 참고하세요</p>
+{% endif %}
+{% endblock %}

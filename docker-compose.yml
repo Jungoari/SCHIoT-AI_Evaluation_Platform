@@ -1,0 +1,109 @@
+name: evalhub
+
+# ------------------------------------------------------------
+# EvalHub — 전체 실행: docker compose up --build
+#
+# 구성
+#   web            Django 웹 (gunicorn)
+#   worker         채점 워커   : 정답 접근 O, 참여자 코드 실행 X
+#   sandbox-worker 검증 워커   : 정답 접근 X, 샌드박스 컨테이너 실행만 지시
+#   db             PostgreSQL
+#   redis          작업 큐 / 캐시
+#
+# 핵심 보안 설계: 정답 볼륨(labels)은 web·worker 에만 마운트하고
+# sandbox-worker 와 샌드박스 컨테이너에는 절대 마운트하지 않는다
+# ------------------------------------------------------------
+
+x-app: &app
+  build:
+    context: ./web
+  image: evalplatform-web:latest
+  env_file: .env
+  environment:
+    POSTGRES_HOST: db
+    POSTGRES_PORT: "5432"
+    REDIS_URL: redis://redis:6379/0
+    REDIS_CACHE_URL: redis://redis:6379/1
+    DATA_ROOT: /data
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-evalplatform}
+      POSTGRES_USER: ${POSTGRES_USER:-evalplatform}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:55432:5432"   # 로컬 개발용 (외부 비노출)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    ports:
+      - "127.0.0.1:56379:6379"   # 로컬 개발용 (외부 비노출)
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  web:
+    <<: *app
+    command: ["/app/entrypoint.sh", "web"]
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+    volumes:
+      - uploads:/data/uploads
+      - labels:/data/labels
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz').status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    <<: *app
+    command: ["/app/entrypoint.sh", "worker", "grading"]
+    volumes:
+      - uploads:/data/uploads
+      - labels:/data/labels
+
+  sandbox-worker:
+    <<: *app
+    command: ["/app/entrypoint.sh", "worker", "sandbox"]
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      REDIS_URL: redis://redis:6379/0
+      REDIS_CACHE_URL: redis://redis:6379/1
+      DATA_ROOT: /data
+      # 샌드박스 작업 폴더의 '호스트 기준' 경로 (Docker 소켓으로 형제 컨테이너를 띄우므로 필요)
+      SANDBOX_HOST_WORK_ROOT: ${SANDBOX_HOST_WORK_ROOT:-/tmp/evalplatform-sandbox}
+    volumes:
+      - uploads:/data/uploads:ro          # 제출물 읽기 전용
+      - ${SANDBOX_HOST_WORK_ROOT:-/tmp/evalplatform-sandbox}:/data/sandbox
+      # 형제 컨테이너 실행용. 이 워커에는 정답 볼륨이 없다
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  pgdata:
+  redisdata:
+  uploads:
+  labels:

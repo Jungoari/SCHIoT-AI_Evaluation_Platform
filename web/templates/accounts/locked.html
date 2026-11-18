@@ -1,0 +1,12 @@
+{% extends "accounts/_auth_layout.html" %}
+{% block title %}잠시 후 다시 시도{% endblock %}
+{% block form %}
+<div class="text-center">
+  <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+    {% include "partials/icon.html" with name="clock" cls="h-7 w-7" %}
+  </div>
+  <h2 class="mt-5 text-xl font-bold">로그인이 일시 제한되었습니다</h2>
+  <p class="mt-2 text-sm text-muted">로그인 실패가 반복되어 계정 보호를 위해 15분간 제한됩니다</p>
+  <a href="{% url 'accounts:login' %}" class="btn-secondary mt-6">로그인 화면으로</a>
+</div>
+{% endblock %}
