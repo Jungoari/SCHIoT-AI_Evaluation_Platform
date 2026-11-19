@@ -7,6 +7,7 @@
 요구사항 슬라이드 구도: 좌측 패널(① RFP 요구사항 ② 왜 중요한가 ③ 어떻게 해결했나) + 우측 테스트 시연 GIF
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -303,7 +304,7 @@ def build():
          ["관리자2 등록 형식 기준 자동 검사", "레이블·행·열 수 확인", "오류 시 채점 불가"],
          ["잘못된 파일로 인한 채점 오류 방지", "학생이 오류 원인을 모르는 답답함 해소"],
          [("정답 CSV로 규격 자동 추론 → 관리자는 확인만", True), "브라우저 사전 검사 + 서버 재검사", "행 번호까지 오류 일괄 안내 · 미차감"],
-         "G04", "✔ TC-D02 152행 'cat' · 빈 값 안내 · 횟수 미차감",
+         "G04", "✔ TC-D02·D03 행 번호·열 이름 오류 안내 · 횟수 미차감",
          ("실제 오류 안내 예시", [("152행", "'cat'은 허용된 레이블이 아님", RED), ("35행", "예측값이 비어 있음", RED),
                             ("헤더", "필요: id, label / 현재: id, digit", RED), ("처리", "업로드 전 차단 · 횟수 미차감", GREEN)])),
         ("리더보드", "p.6",
@@ -401,7 +402,7 @@ def build():
 
     # 16. 설계 품질
     s = content_slide(prs, "설계 품질 — 숫자로 증명", n); n += 1
-    for i, (v, l) in enumerate([("46/46", "RFP 요구사항\n구현·추적표"), ("101", "자동화 테스트\n전부 통과"), ("6/6", "샌드박스 공격\n실측 차단"),
+    for i, (v, l) in enumerate([("46/46", "RFP 요구사항\n구현·추적표"), ("131", "자동화 테스트\n전부 통과"), ("6/6", "샌드박스 공격\n실측 차단"),
                                 ("15", "테스트 시연 GIF\n명령 1줄로 재녹화")]):
         stat_card(s, 0.45 + i * 2.3, 1.25, 2.15, 1.9, v, l, GREEN if i in (0, 2) else NAVY)
     rect(s, 0.45, 3.45, 4.45, 3.4, CARD)
@@ -440,15 +441,36 @@ def build():
         text(s, x + 0.15, y + 0.12, 4.15, 2.5, [(head, {"size": 16, "bold": True, "color": NAVY, "space_after": 8})] + bullets(lines, size=15, gap=8))
 
     # Q&A 를 맨 뒤로, 템플릿 예시 슬라이드 삭제
+    qa_box = None
     for sh in qa_slide.shapes:
         if sh.name == "TextBox 5":
             set_runs(sh, ["Questions?", "", "Contact: jw6258@sch.ac.kr"])
+            qa_box = sh
+    # 저장소 주소: GitHub 에 올린 뒤 REPO_URL 환경 변수로 다시 생성하면 Q&A 슬라이드에 표시
+    #   REPO_URL=https://github.com/아이디/저장소 .venv/bin/python scripts/build_presentation.py
+    repo_url = os.environ.get("REPO_URL", "").strip()
+    if repo_url and qa_box is not None:
+        y = qa_box.top.inches + qa_box.height.inches + 0.15
+        # 슬라이드 전체 폭에 가운데 정렬 (위 'Questions?'·'Contact' 와 같은 축), 긴 주소도 한 줄에
+        text(qa_slide, 0.5, y, 9.0, 0.5, [(f"GitHub: {repo_url}", {"size": 14, "bold": True, "color": SCH})],
+             align=PP_ALIGN.CENTER)
     order = list(prs.slides._sldIdLst)
     # 템플릿 슬라이드: 0 표지, 1 예시, 2 예시, 3 Q&A, 4 작성 규칙
     for idx in (4, 2, 1):
         remove_slide(prs, idx)
     move_slide(prs, 1, len(prs.slides._sldIdLst) - 1)  # Q&A 를 마지막으로
     _ = order
+
+    # 발표자 노트 (대본) — scripts/presentation_notes.py
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from presentation_notes import NOTES, write_markdown
+
+    for no, slide in enumerate(prs.slides, 1):
+        if no in NOTES:
+            sec, body = NOTES[no]
+            slide.notes_slide.notes_text_frame.text = f"[약 {sec}초]\n{body}"
+    write_markdown(ROOT / "docs" / "PRESENTATION_SCRIPT.md")
+
     OUT.parent.mkdir(parents=True, exist_ok=True)
     prs.save(str(OUT))
     print(f"저장: {OUT} ({OUT.stat().st_size / 1024 / 1024:.1f}MB, {len(prs.slides)}장)")

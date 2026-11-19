@@ -22,8 +22,8 @@
       <span class="w-24 text-right text-[17px] font-bold tabular">{{ r.score_text }}</span>
       <span class="flex w-12 items-center justify-end gap-1.5 text-xs font-semibold tabular">
         {% if r.change is None %}<span class="badge-blue px-1.5 py-0">NEW</span>
-        {% elif r.change > 0 %}<span class="text-emerald-600">{{ r.change_abs }}</span><span class="rank-up"></span>
-        {% elif r.change < 0 %}<span class="text-rose-600">{{ r.change_abs }}</span><span class="rank-down"></span>
+        {% elif r.change > 0 %}<span class="text-emerald-700">{{ r.change_abs }}</span><span class="rank-up"></span>
+        {% elif r.change < 0 %}<span class="text-rose-700">{{ r.change_abs }}</span><span class="rank-down"></span>
         {% else %}<span class="rank-same"></span>{% endif %}
       </span>
     </li>

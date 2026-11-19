@@ -44,12 +44,12 @@
   --color-track: #eef3fe; /* 막대 차트 빈 트랙 */
   --color-ink: #111111; /* 제목·숫자 */
   --color-ink-2: #3d3d3d; /* 본문 */
-  --color-muted: #7a7a7a; /* 라벨·보조 문구 */
-  --color-faint: #a9a9a9;
+  --color-muted: #6b6b6b; /* 라벨·보조 문구 — 흰 배경·캔버스 모두 대비 4.5:1 이상 (WCAG AA) */
+  --color-faint: #a9a9a9; /* 장식 전용 (아이콘·구분 기호). 글자에는 쓰지 않음 — 대비 부족 */
   --color-line: #e7e8ec; /* 구분선 */
 
   --color-up: #22d39a; /* 순위 상승 */
-  --color-down: #f2462e; /* 순위 하락 */
+  --color-down: #f2462e; /* 순위 하락 화살표 (장식). 빨간 글자는 rose-700 사용 — 흰 배경 대비 3.7 로 AA 미달 */
 
   --radius-card: 20px;
   --shadow-card: 0 1px 2px rgba(17, 17, 17, 0.03), 0 8px 24px -12px rgba(17, 17, 17, 0.08);
@@ -66,6 +66,16 @@
   body {
     @apply bg-canvas text-ink font-sans;
   }
+  /* 키보드 사용자를 위한 포커스 표시 — 링크·메뉴·카드 링크 포함 모든 요소 (WCAG 2.4.7) */
+  :focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  /* 본문 바로가기로 이동한 본문 영역 자체에는 테두리를 그리지 않음 */
+  main:focus-visible {
+    outline: none;
+  }
 }
 
 /* 숫자 폭 고정 (점수·순위 열 정렬) */
@@ -78,7 +88,8 @@
   @apply flex items-center gap-3.5 rounded-xl px-4 py-3 text-[15px] font-medium text-ink-2 transition hover:bg-surface-2;
 }
 @utility nav-item-active {
-  @apply nav-item bg-brand-100 text-brand-600 hover:bg-brand-100;
+  /* brand-600 은 이 배경에서 대비 4.29 (AA 미달) → brand-700 은 5.4 */
+  @apply nav-item bg-brand-100 text-brand-700 hover:bg-brand-100;
 }
 @utility nav-section {
   @apply px-4 pt-8 pb-2 text-[15px] font-medium text-muted;
@@ -102,7 +113,7 @@
   @apply mt-4 text-[26px] leading-none font-bold tracking-tight text-ink tabular;
 }
 @utility stat-sub {
-  @apply text-base font-semibold text-faint;
+  @apply text-base font-semibold text-muted;
 }
 
 /* ---------------- 버튼 ---------------- */
@@ -120,10 +131,11 @@
   @apply btn text-ink-2 hover:bg-surface-2;
 }
 @utility btn-danger {
-  @apply btn bg-down text-white hover:brightness-95;
+  /* 흰 글자 대비 AA (기존 down 색은 3.7) */
+  @apply btn bg-rose-700 text-white hover:bg-rose-800;
 }
 @utility btn-success {
-  @apply btn bg-emerald-500 text-white hover:bg-emerald-600;
+  @apply btn bg-emerald-700 text-white hover:bg-emerald-800;
 }
 
 /* ---------------- 폼 ---------------- */
@@ -131,14 +143,14 @@
   @apply mb-1.5 block text-sm font-semibold text-ink-2;
 }
 @utility input {
-  @apply block w-full rounded-2xl border border-line bg-surface px-4 py-3 text-[15px] text-ink placeholder:text-faint
-    transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 focus:outline-none;
+  @apply block w-full rounded-2xl border border-line bg-surface px-4 py-3 text-[15px] text-ink placeholder:text-muted
+    transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/30 focus:outline-none;
 }
 @utility help {
   @apply mt-1.5 text-xs text-muted;
 }
 @utility field-error {
-  @apply mt-1.5 text-xs font-medium text-down;
+  @apply mt-1.5 text-xs font-medium text-rose-700;
 }
 /* 필터 드롭다운 (디자인의 "Timeframe: All-time" 알약형) */
 @utility filter {
@@ -159,7 +171,7 @@
   @apply badge bg-emerald-50 text-emerald-700;
 }
 @utility badge-red {
-  @apply badge bg-rose-50 text-rose-600;
+  @apply badge bg-rose-50 text-rose-700;
 }
 @utility badge-amber {
   @apply badge bg-amber-50 text-amber-700;
@@ -239,4 +251,9 @@
   .table tbody tr {
     @apply transition-colors hover:bg-surface-2/70;
   }
+}
+
+/* 본문 바로가기 — 평소엔 숨기고 Tab 으로 포커스되면 왼쪽 위에 표시 */
+@utility skip-link {
+  @apply sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-xl focus:bg-brand-700 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white;
 }

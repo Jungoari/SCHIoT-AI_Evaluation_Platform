@@ -95,7 +95,7 @@ def decide(review: Review, actor, approve: bool, note: str = "", request=None) -
     with transaction.atomic():
         review = Review.objects.select_for_update(of=("self",)).select_related("submission__user").get(pk=review.pk)
         if review.state != Review.State.PROPOSED:
-            raise ReviewError("관리자1의 판정 제안이 있어야 최종 결정할 수 있습니다")
+            raise ReviewError("조교의 검토 의견이 있어야 최종 결정할 수 있습니다")
         if not approve and not (note.strip() or review.admin1_note):
             raise ReviewError("부적합 결정에는 사유가 필요합니다")
         review.state = Review.State.APPROVED if approve else Review.State.REJECTED
@@ -106,7 +106,7 @@ def decide(review: Review, actor, approve: bool, note: str = "", request=None) -
         record(
             "review.approved" if approve else "review.rejected", actor=actor, request=request,
             competition=project.competition, target=review,
-            summary=f"{review.submission.user.name} 기록 {'검증 통과 · 성적 확정' if approve else '부적합 확정 → 다음 기록 검토'}",
+            summary=f"{review.submission.user.name} 기록 {'검토 통과 · 성적 확정' if approve else '부적합 확정 → 다음 기록 검토'}",
             data={"submission": str(review.submission_id), "admin1_verdict": review.admin1_verdict,
                   "self_approval": review.admin1_id == actor.pk, "note": review.admin2_note},
         )
@@ -134,9 +134,13 @@ def final_results(project) -> list[dict]:
     """
     sync_queue(project)
     cands = candidates(project)
+    # 검토 기록을 한 번에 가져온다 (참여자 수만큼 쿼리가 늘어나는 N+1 방지)
+    reviews = {}
+    for rv in Review.objects.filter(submission__in=list(cands.values())):
+        reviews.setdefault(rv.submission_id, rv)  # 기본 정렬 순서의 첫 기록 = 기존 .first() 와 동일
     rows = []
     for sub in cands.values():
-        review = Review.objects.filter(submission=sub).first()
+        review = reviews.get(sub.pk)
         rows.append({"submission": sub, "user": sub.user, "review": review,
                      "confirmed": bool(review and review.state == Review.State.APPROVED)})
     confirmed = sorted([r for r in rows if r["confirmed"]], key=lambda r: sort_key(project, r["submission"]))

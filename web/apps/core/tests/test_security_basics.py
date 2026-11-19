@@ -34,7 +34,7 @@ def test_logout_requires_post(client, participant):
 
 @pytest.mark.django_db
 def test_dashboard_shows_account_and_role(client, admin2, admin1, participant):
-    for user, label in [(admin2, "(관리자2 · 총괄)"), (admin1, "(관리자1)"), (participant, "(참여자)")]:
+    for user, label in [(admin2, "(교수 · 총괄)"), (admin1, "(조교)"), (participant, "(참여자)")]:
         client.force_login(user)
         html = client.get(reverse("core:dashboard")).content.decode()
         assert "현재 로그인 계정" in html and user.name in html and label in html

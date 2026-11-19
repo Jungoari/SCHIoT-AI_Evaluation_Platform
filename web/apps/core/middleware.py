@@ -1,6 +1,8 @@
 """
 공통 미들웨어
 
+- TrustedProxyMiddleware: 리버스 프록시(HTTPS 종단) 뒤에서 실제 접속자 IP 복원.
+  설정한 프록시 개수만큼만 X-Forwarded-For 를 믿는다 (기본 0 = 헤더 무시, 위조 불가)
 - RequestIdMiddleware: 요청마다 추적 ID를 부여한다. 오류 화면에는 이 ID만 보여주고
   상세 내용은 서버 로그에서 ID로 찾는다 (행안부 가이드 '오류 메시지 정보노출' 대응)
 - SecurityHeadersMiddleware: CSP 등 보안 헤더 기본값을 붙인다.
@@ -26,6 +28,30 @@ DEFAULT_CSP = "; ".join(
         "form-action 'self'",
     ]
 )
+
+
+class TrustedProxyMiddleware:
+    """
+    프록시 뒤에서는 모든 요청의 REMOTE_ADDR 가 프록시 IP 하나로 보인다.
+    그러면 IP 기준 실패 횟수 제한(참여 코드·로그인)이 '모든 방문자 공동 계정'처럼 동작해
+    누군가 10번 틀리면 반 전체의 가입이 15분간 막힌다 → 실제 접속자 IP 로 바꿔 준다.
+
+    X-Forwarded-For 는 '클라이언트, 프록시1, 프록시2' 순으로 쌓이고, 맨 앞쪽은 접속자가 위조할 수 있다.
+    그래서 우리 쪽 프록시 개수(N)만큼 오른쪽에서 센 값만 믿는다 (N=1 이면 마지막 값).
+    """
+
+    def __init__(self, get_response):
+        from django.conf import settings
+
+        self.get_response = get_response
+        self.count = int(getattr(settings, "TRUSTED_PROXY_COUNT", 0))
+
+    def __call__(self, request):
+        if self.count > 0:
+            hops = [h.strip() for h in request.META.get("HTTP_X_FORWARDED_FOR", "").split(",") if h.strip()]
+            if len(hops) >= self.count:
+                request.META["REMOTE_ADDR"] = hops[-self.count]
+        return self.get_response(request)
 
 
 class RequestIdMiddleware:

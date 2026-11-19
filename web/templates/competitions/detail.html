@@ -12,24 +12,24 @@
 {% if can_manage %}
 <section class="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
   <div class="stat"><p class="stat-label">참여자</p><p class="stat-value">{{ member_counts.participants }}<span class="stat-sub"> 명</span></p></div>
-  <div class="stat"><p class="stat-label">관리자1</p><p class="stat-value">{{ member_counts.admins }}<span class="stat-sub"> 명</span></p></div>
+  <div class="stat"><p class="stat-label">조교</p><p class="stat-value">{{ member_counts.admins }}<span class="stat-sub"> 명</span></p></div>
   <div class="stat"><p class="stat-label">프로젝트</p><p class="stat-value">{{ projects|length }}</p></div>
   <div class="stat">
     <p class="stat-label">채점 대기열</p>
     {% if queue.mode == "eager" %}<p class="stat-value text-[18px]">즉시 실행 모드</p>
-    {% elif queue.error %}<p class="stat-value text-[18px] text-down">연결 오류</p>
+    {% elif queue.error %}<p class="stat-value text-[18px] text-rose-700">연결 오류</p>
     {% else %}<p class="stat-value">{{ queue.grading.queued }}<span class="stat-sub"> 대기 · 실패 {{ queue.grading.failed }}</span></p>{% endif %}
   </div>
 </section>
 {% endif %}
 
-<div class="grid gap-6 {% if can_manage %}xl:grid-cols-[1.6fr_1fr]{% endif %}">
+<div class="grid grid-cols-1 gap-6 {% if can_manage %}xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]{% endif %}">
   <section class="space-y-4">
     {% for item in projects %}
     {% with p=item.project %}
     <article class="card p-6">
       <div class="flex flex-wrap items-start gap-4">
-        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-100 text-brand-600">{% include "partials/icon.html" with name="folder" cls="h-6 w-6" %}</div>
+        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-100 text-brand-700">{% include "partials/icon.html" with name="folder" cls="h-6 w-6" %}</div>
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-2">
             <h2 class="text-lg font-bold">{{ p.title }}</h2>
@@ -41,20 +41,20 @@
           </p>
         </div>
         <div class="flex gap-2">
-          <a href="{% url 'leaderboard:page' p.pk %}" class="btn-secondary">리더보드</a>
+          <a href="{% url 'leaderboard:page' p.pk %}" class="btn-secondary">순위표</a>
           <a href="{% url 'competitions:project_detail' p.pk %}" class="btn-primary">{% if role == "participant" %}제출하기{% else %}열기{% endif %}</a>
         </div>
       </div>
       {% if role == "participant" %}
       <div class="mt-5 grid grid-cols-3 gap-3 text-sm">
-        <div class="rounded-2xl bg-surface-2 p-4"><p class="text-muted">남은 제출</p><p class="mt-1 text-xl font-bold tabular">{% if item.quota.current %}{{ item.quota.current.remaining }}<span class="text-sm font-semibold text-faint">/{{ item.quota.current.deadline.max_submissions }}</span>{% else %}-{% endif %}</p></div>
+        <div class="rounded-2xl bg-surface-2 p-4"><p class="text-muted">남은 제출</p><p class="mt-1 text-xl font-bold tabular">{% if item.quota.current %}{{ item.quota.current.remaining }}<span class="text-sm font-semibold text-muted">/{{ item.quota.current.deadline.max_submissions }}</span>{% else %}-{% endif %}</p></div>
         <div class="rounded-2xl bg-surface-2 p-4"><p class="text-muted">내 최고 점수</p><p class="mt-1 text-xl font-bold tabular">{{ item.best.score|score:p.decimals }}</p></div>
         <div class="rounded-2xl bg-surface-2 p-4"><p class="text-muted">마감까지</p><p class="mt-1 text-xl font-bold">{% if item.next_deadline %}{{ item.next_deadline.due_at|timeuntil }}{% else %}-{% endif %}</p></div>
       </div>
       {% elif can_manage %}
       <div class="mt-5 flex flex-wrap gap-2 text-sm">
         <span class="badge-slate">제출 {{ item.submission_count }}건</span>
-        <a class="link" href="{% url 'review:queue' p.pk %}">검토 큐</a><span class="text-faint">·</span>
+        <a class="link" href="{% url 'review:queue' p.pk %}">검토 목록</a><span class="text-faint">·</span>
         <a class="link" href="{% url 'review:results' p.pk %}">최종 성적</a>
         {% if is_admin2 %}<span class="text-faint">·</span><a class="link" href="{% url 'competitions:project_settings' p.pk %}">설정</a>{% endif %}
       </div>
@@ -63,9 +63,9 @@
     {% endwith %}
     {% empty %}
     <div class="card flex flex-col items-center px-6 py-16 text-center">
-      <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100 text-brand-600">{% include "partials/icon.html" with name="folder" cls="h-7 w-7" %}</div>
+      <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100 text-brand-700">{% include "partials/icon.html" with name="folder" cls="h-7 w-7" %}</div>
       <p class="mt-5 text-lg font-bold">{% if is_admin2 %}첫 프로젝트를 추가하세요{% else %}아직 공개된 프로젝트가 없습니다{% endif %}</p>
-      <p class="mt-1.5 text-sm text-muted">{% if is_admin2 %}테스트셋을 올리면 CSV 규격을 자동으로 추론합니다{% else %}관리자가 프로젝트를 공개하면 여기에 표시됩니다{% endif %}</p>
+      <p class="mt-1.5 text-sm text-muted">{% if is_admin2 %}정답 파일을 올리면 CSV 형식을 자동으로 찾아 줍니다{% else %}관리자가 프로젝트를 공개하면 여기에 표시됩니다{% endif %}</p>
       {% if is_admin2 %}<a href="{% url 'competitions:project_create' competition.pk %}" class="btn-primary mt-6">프로젝트 추가</a>{% endif %}
     </div>
     {% endfor %}
@@ -86,10 +86,10 @@
         </li>
         {% endfor %}
       </ul>
-      <p class="mt-4 text-xs text-muted">코드는 해시로만 저장되어 끝 4자리만 표시됩니다</p>
+      <p class="mt-4 text-xs text-muted">코드 원문은 저장하지 않아 끝 4자리만 표시됩니다</p>
     </section>
     <section class="card p-6">
-      <div class="flex items-center justify-between"><h2 class="card-title">최근 활동</h2><a class="text-sm font-semibold text-brand-600" href="{% url 'competitions:audit' competition.pk %}">감사 로그</a></div>
+      <div class="flex items-center justify-between"><h2 class="card-title">최근 활동</h2><a class="text-sm font-semibold text-brand-600" href="{% url 'competitions:audit' competition.pk %}">변경 기록</a></div>
       <ul class="mt-4 space-y-3 text-sm">
         {% for log in recent_logs %}
         <li><p class="font-medium">{{ log.summary }}</p><p class="text-xs text-muted">{{ log.actor.name|default:"시스템" }} · {{ log.created_at|date:"m-d H:i" }}</p></li>

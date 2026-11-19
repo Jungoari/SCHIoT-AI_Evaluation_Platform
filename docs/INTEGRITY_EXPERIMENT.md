@@ -1,6 +1,6 @@
 # 부정 제출 탐지 실험 결과
 
-> `python manage.py integrity_experiment --rerun` · 시드 7 · 2026-11-19 04:25 · 데이터: sklearn digits (테스트 594행, 10클래스)
+> `python manage.py integrity_experiment --rerun` · 시드 7 · 2026-11-19 06:48 · 데이터: sklearn digits (테스트 594행, 10클래스)
 > 실험은 하나의 트랜잭션 안에서 실행하고 롤백했다 (운영 데이터·감사 로그에 영향 없음)
 
 ## 1. 그룹별 결과

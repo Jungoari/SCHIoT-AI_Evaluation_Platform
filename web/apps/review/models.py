@@ -16,9 +16,9 @@ from django.db import models
 
 class Review(models.Model):
     class State(models.TextChoices):
-        PENDING = "pending", "검증 대기"
+        PENDING = "pending", "검토 전"
         PROPOSED = "proposed", "검토 중"
-        APPROVED = "approved", "검증 통과"
+        APPROVED = "approved", "검토 통과"
         REJECTED = "rejected", "부적합"
 
     class Verdict(models.TextChoices):

@@ -2,6 +2,10 @@
 PPTX 미리보기 렌더러 (시각 점검용) — 슬라이드의 도형·텍스트·그림을 HTML 로 다시 그려 PNG 로 저장
 
     .venv/bin/python scripts/pptx_preview.py presentation/발표.pptx 출력폴더
+    .venv/bin/python scripts/pptx_preview.py presentation/발표.pptx 출력폴더 --pdf presentation/발표_백업.pdf
+
+--pdf: 슬라이드 번호 표시 없이 2배 해상도로 그려 PDF 1개로 묶는다
+       (발표장 PC 에 PowerPoint 가 없거나 파일이 안 열릴 때를 대비한 백업. GIF 는 결과가 보이는 마지막 장면)
 
 LibreOffice 없이 글자 넘침·겹침·여백을 확인하기 위한 근사 렌더러다.
 (우리 생성기가 쓰는 도형: 텍스트 상자, 사각형/둥근 사각형, 그림, 레이아웃 장식)
@@ -18,6 +22,20 @@ from pptx.enum.shapes import MSO_SHAPE_TYPE, PP_PLACEHOLDER
 from pptx.util import Emu
 
 DPI = 96
+# PDF 백업에서는 GIF 의 첫 장면(동작 전 화면) 대신 마지막 장면(결과 화면)을 쓴다
+GIF_LAST_FRAME = False
+
+
+def gif_last_frame(blob: bytes) -> bytes:
+    import io
+
+    from PIL import Image
+
+    im = Image.open(io.BytesIO(blob))
+    im.seek(im.n_frames - 1)
+    buf = io.BytesIO()
+    im.convert("RGB").save(buf, "PNG")
+    return buf.getvalue()
 
 
 def px(emu):
@@ -65,6 +83,8 @@ def shape_html(shape, z):
     if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
         blob = shape.image.blob
         mime = shape.image.content_type
+        if GIF_LAST_FRAME and mime == "image/gif":
+            blob, mime = gif_last_frame(blob), "image/png"
         return f'<img class="s" style="{style};object-fit:fill" src="data:{mime};base64,{base64.b64encode(blob).decode()}">'
     parts = []
     if shape.shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE:
@@ -106,7 +126,9 @@ def placeholder_geom(shape, layout):
     return shape
 
 
-def render(pptx_path, out_dir):
+def render(pptx_path, out_dir, pdf_path=None):
+    global GIF_LAST_FRAME
+    GIF_LAST_FRAME = bool(pdf_path)
     prs = Presentation(pptx_path)
     W, H = px(prs.slide_width), px(prs.slide_height)
     pages = []
@@ -130,19 +152,36 @@ def render(pptx_path, out_dir):
     .s{{position:absolute;box-sizing:border-box}} .t{{display:flex;flex-direction:column;overflow:visible;word-break:keep-all;overflow-wrap:anywhere}}
     .no{{position:absolute;right:6px;bottom:4px;font:10px Arial;color:#c00}}
     </style></head><body>{''.join(pages)}</body></html>"""
-    out = Path(out_dir)
+    out = Path(out_dir).resolve()  # 상대 경로로 줘도 동작하도록 (브라우저가 file:// 절대 경로를 요구)
     out.mkdir(parents=True, exist_ok=True)
     (out / "preview.html").write_text(doc, encoding="utf-8")
     with sync_playwright() as p:
         b = p.chromium.launch()
-        page = b.new_page(viewport={"width": int(W), "height": int(H)})
+        scale = 2 if pdf_path else 1
+        page = b.new_page(viewport={"width": int(W), "height": int(H)}, device_scale_factor=scale)
         page.goto((out / "preview.html").as_uri())
         page.wait_for_timeout(800)
+        if pdf_path:
+            page.add_style_tag(content=".no{display:none}")
         for i, sec in enumerate(page.locator("section").all(), start=1):
             sec.screenshot(path=str(out / f"slide-{i:02d}.png"))
         b.close()
     print(f"{len(pages)}장 → {out}")
+    if pdf_path:
+        from PIL import Image
+
+        images = [Image.open(out / f"slide-{i:02d}.png").convert("RGB") for i in range(1, len(pages) + 1)]
+        Path(pdf_path).parent.mkdir(parents=True, exist_ok=True)
+        # 4:3 슬라이드 10in 기준 해상도 → 인쇄해도 선명하도록 2배 렌더링 결과를 그대로 사용
+        images[0].save(pdf_path, save_all=True, append_images=images[1:], resolution=DPI * scale)
+        print(f"PDF → {pdf_path} ({Path(pdf_path).stat().st_size / 1024 / 1024:.1f}MB)")
 
 
 if __name__ == "__main__":
-    render(sys.argv[1], sys.argv[2])
+    args = sys.argv[1:]
+    pdf = None
+    if "--pdf" in args:
+        i = args.index("--pdf")
+        pdf = args[i + 1]
+        del args[i : i + 2]
+    render(args[0], args[1], pdf)

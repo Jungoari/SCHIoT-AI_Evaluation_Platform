@@ -95,3 +95,43 @@ def test_weak_password_rejected(client, participant_code):
     data["password1"] = data["password2"] = "12345678"
     client.post(reverse("accounts:signup"), data)
     assert not User.objects.filter(email="new@test.kr").exists()
+
+
+# ---------------------------------------------------------------------------
+# 리버스 프록시 뒤 실제 IP 복원 (TrustedProxyMiddleware)
+# ---------------------------------------------------------------------------
+PROXY = "172.18.0.1"  # 모든 요청이 같은 프록시 IP 로 들어오는 상황
+
+
+@pytest.mark.django_db
+def test_behind_proxy_one_attacker_does_not_block_other_students(client, settings, competition, participant_code):
+    """프록시 뒤에서 한 사람이 10번 틀려도 다른 학생의 가입은 막히지 않아야 한다"""
+    settings.TRUSTED_PROXY_COUNT = 1
+    for _ in range(10):
+        client.post(reverse("accounts:signup"), signup_data("AAAA-BBBB-CCCC"),
+                    REMOTE_ADDR=PROXY, HTTP_X_FORWARDED_FOR="203.0.113.7")
+    res = client.post(reverse("accounts:signup"), signup_data(participant_code),
+                      REMOTE_ADDR=PROXY, HTTP_X_FORWARDED_FOR="198.51.100.20")
+    assert res.status_code == 302
+
+
+@pytest.mark.django_db
+def test_behind_proxy_spoofed_forwarded_for_does_not_bypass_limit(client, settings, competition, participant_code):
+    """공격자가 X-Forwarded-For 앞쪽을 매번 바꿔도, 프록시가 붙인 마지막 값(실제 IP)으로 제한된다"""
+    settings.TRUSTED_PROXY_COUNT = 1
+    for i in range(10):
+        client.post(reverse("accounts:signup"), signup_data("AAAA-BBBB-CCCC"),
+                    REMOTE_ADDR=PROXY, HTTP_X_FORWARDED_FOR=f"10.0.0.{i}, 203.0.113.7")
+    res = client.post(reverse("accounts:signup"), signup_data(participant_code),
+                      REMOTE_ADDR=PROXY, HTTP_X_FORWARDED_FOR="10.9.9.9, 203.0.113.7")
+    assert "15분간 제한" in res.content.decode()
+
+
+@pytest.mark.django_db
+def test_forwarded_for_ignored_without_trusted_proxy(client, settings, competition, participant_code):
+    """프록시 설정이 없으면(기본값) 헤더를 바꿔 끼워도 제한을 피할 수 없다"""
+    settings.TRUSTED_PROXY_COUNT = 0
+    for i in range(10):
+        client.post(reverse("accounts:signup"), signup_data("AAAA-BBBB-CCCC"), HTTP_X_FORWARDED_FOR=f"10.0.0.{i}")
+    res = client.post(reverse("accounts:signup"), signup_data(participant_code), HTTP_X_FORWARDED_FOR="10.9.9.9")
+    assert "15분간 제한" in res.content.decode()

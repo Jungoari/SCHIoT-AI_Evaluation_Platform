@@ -40,7 +40,7 @@ def request_rerun(sub: Submission, actor, request=None):
     report.rerun = {"status": "queued", "requested_at": timezone.now().isoformat()}
     report.save(update_fields=["rerun", "updated_at"])
     record("integrity.rerun_requested", actor=actor, request=request, competition=sub.project.competition,
-           target=sub, summary=f"{sub.user.name} 제출 재실행 검증 요청")
+           target=sub, summary=f"{sub.user.name} 제출 다시 실행 검증 요청")
     enqueue("sandbox", run_rerun, str(sub.pk))
 
 
@@ -155,7 +155,7 @@ def run_rerun(submission_id: str) -> None:
         rerun = {"status": "done", **run, "finished_at": timezone.now().isoformat()}
         if run.get("unavailable"):
             rerun["status"] = "unavailable"
-            check = _check("yellow", "샌드박스를 사용할 수 없어 재실행하지 못했습니다 (관리자 확인 필요)")
+            check = _check("yellow", "실행 환경을 사용할 수 없어 다시 실행하지 못했습니다 (관리자 확인 필요)")
         elif run["timeout"]:
             check = _check("yellow", f"제한 시간({settings.SANDBOX_TIMEOUT_SECONDS}초)을 넘겨 강제 종료되었습니다")
         elif run.get("oom"):
@@ -180,8 +180,8 @@ def run_rerun(submission_id: str) -> None:
     report.rerun = rerun
     report.save()
     record("integrity.rerun_finished", actor=None, competition=sub.project.competition, target=sub,
-           summary=f"{sub.user.name} 재실행 검증: {check['detail'][:120]}", data={"level": check["level"]})
+           summary=f"{sub.user.name} 다시 실행 검증: {check['detail'][:120]}", data={"level": check["level"]})
 
 
 def _check(level, detail, evidence=None):
-    return {"code": "I-6", "title": "추론 재실행", "level": level, "detail": detail, "evidence": evidence or {}}
+    return {"code": "I-6", "title": "다시 실행해 확인", "level": level, "detail": detail, "evidence": evidence or {}}

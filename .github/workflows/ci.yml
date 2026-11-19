@@ -40,12 +40,15 @@ jobs:
           cache: pip
           cache-dependency-path: web/requirements*.txt
       - run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: 브라우저 설치 (JS 해시 테스트용 — 없으면 해당 테스트가 건너뛰어져 개수가 줄어듦)
+        run: python -m playwright install --with-deps chromium
       - name: 린트
         run: ruff check .
       - name: 보안 정적 분석 (bandit)
         run: bandit -q -r apps config -x '*/tests/*,*/migrations/*'
       - name: 의존성 취약점 (pip-audit)
-        run: pip-audit -r requirements.txt || true
+        # 알려진 취약점이 있는 라이브러리가 들어오면 빌드 실패 (2026-11-19 기준 0건)
+        run: pip-audit -r requirements.txt
       - name: 마이그레이션 누락 확인
         run: python manage.py makemigrations --check --dry-run
       - name: 테스트

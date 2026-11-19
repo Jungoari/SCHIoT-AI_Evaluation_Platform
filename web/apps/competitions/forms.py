@@ -85,9 +85,9 @@ class ProjectForm(forms.ModelForm):
 
 class TestsetForm(forms.Form):
     testset = forms.FileField(
-        label="정답 포함 테스트셋 (.csv)",
+        label="정답 파일 (.csv)",
         widget=forms.ClearableFileInput(attrs={"class": INPUT, "accept": ".csv"}),
-        help_text="ID 열 · 특성 열 · 정답 열이 모두 있는 CSV. 정답 열은 참여자에게 절대 배포되지 않습니다",
+        help_text="ID 열 · 특성 열 · 정답 열이 모두 있는 CSV. 정답 열은 학생에게 절대 공개되지 않습니다",
     )
 
 
@@ -134,7 +134,7 @@ class DeadlineForm(forms.ModelForm):
 class ProjectFileForm(forms.Form):
     kind = forms.ChoiceField(
         label="종류",
-        choices=[(ProjectFile.Kind.TRAIN, "학습 데이터 (.csv)"), (ProjectFile.Kind.TEMPLATE_NOTEBOOK, "템플릿 노트북 (.ipynb)"),
+        choices=[(ProjectFile.Kind.TRAIN, "학습 데이터 (.csv)"), (ProjectFile.Kind.TEMPLATE_NOTEBOOK, "예시 노트북 (.ipynb)"),
                  (ProjectFile.Kind.EXTRA, "기타 자료")],
         widget=forms.Select(attrs={"class": INPUT}),
     )

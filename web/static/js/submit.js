@@ -134,7 +134,7 @@
   // ---------------- 지문 계산 ----------------
   // 큰 파일은 4MB 조각 스트리밍 해시 (static/js/sha256.js)
   async function sha256(file, label) {
-    return window.sha256File(file, (r) => setProgress(`파일 지문(SHA-256) 계산 중 · ${label}`, 1 + r * 4));
+    return window.sha256File(file, (r) => setProgress(`파일 확인 중 · ${label}`, 1 + r * 4));
   }
 
   function setProgress(label, pct) {
@@ -196,13 +196,13 @@
 
     button.disabled = true;
     try {
-      setProgress("파일 지문(SHA-256) 계산 중", 3);
+      setProgress("파일 확인 중", 3);
       const hashes = {
         csv: await sha256(files.csv, "CSV"),
         notebook: await sha256(files.notebook, "노트북"),
         weights: await sha256(files.weights, "가중치"),
       };
-      setProgress("업로드 티켓 발급 중", 6);
+      setProgress("업로드 준비 중", 6);
       const startRes = await fetch(form.dataset.startUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken() },

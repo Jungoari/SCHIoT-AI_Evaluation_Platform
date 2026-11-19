@@ -173,7 +173,7 @@ def regrade_project(project, actor=None, request=None) -> int:
             sub.save(update_fields=["status", "slot"])
         record(
             "project.regraded", actor=actor, request=request, competition=project.competition, target=project,
-            summary=f"{project.title} 전체 재채점 {len(ids)}건", data={"count": len(ids)},
+            summary=f"{project.title} 전체 다시 채점 {len(ids)}건", data={"count": len(ids)},
         )
         for pk in ids:
             enqueue("grading", grade_submission, str(pk))

@@ -29,7 +29,7 @@
       {% include "partials/icon.html" with name="users" %}회원 관리
     </a>
     <a href="{% url 'competitions:audit' competition.pk %}" class="{% if '/audit/' in path %}nav-item-active{% else %}nav-item{% endif %}">
-      {% include "partials/icon.html" with name="shield" %}감사 로그
+      {% include "partials/icon.html" with name="shield" %}변경 기록
     </a>
     {% endif %}
   </nav>
@@ -41,16 +41,17 @@
       {% include "partials/icon.html" with name="user" %}
       <span class="min-w-0">
         <span class="block truncate">{{ user.name }}</span>
-        <span class="block truncate text-xs text-muted">{% if user.is_admin2 %}관리자2 · 총괄{% else %}{{ user.email }}{% endif %}</span>
+        <span class="block truncate text-xs text-muted">{% if user.is_admin2 %}교수 · 총괄{% else %}{{ user.email }}{% endif %}</span>
       </span>
     </div>
+    <a href="{{ request.path }}?tutorial=1" class="nav-item" data-testid="tutorial-replay">{% include "partials/icon.html" with name="check" %}사용 안내 다시 보기</a>
     <form method="post" action="{% url 'accounts:logout' %}">
       {% csrf_token %}
       <button type="submit" class="nav-item w-full">{% include "partials/icon.html" with name="logout" %}로그아웃</button>
     </form>
   </div>
 
-  <div class="mt-auto divider pt-5 px-3 text-xs leading-relaxed text-faint">
+  <div class="mt-auto divider pt-5 px-3 text-xs leading-relaxed text-muted">
     순천향대학교 사물인터넷학과<br>AI모델 성능평가 자동화
   </div>
 </aside>

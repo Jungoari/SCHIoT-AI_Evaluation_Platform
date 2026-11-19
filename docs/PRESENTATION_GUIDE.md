@@ -2,6 +2,8 @@
 
 > **현재 상태 (2026-11-19)**: `scripts/build_presentation.py` 로 초안 20장 자동 생성 → `presentation/AI모델_성능평가_자동화_발표.pptx`
 > 시각 점검: `scripts/pptx_preview.py` (LibreOffice 없이 슬라이드를 이미지로 렌더링)
+> PDF 백업: `scripts/pptx_preview.py <pptx> <폴더> --pdf presentation/..._백업.pdf` (GIF 는 결과가 보이는 마지막 장면)
+> 발표 대본: [PRESENTATION_SCRIPT.md](PRESENTATION_SCRIPT.md) — 슬라이드별 대본·시간·예상 질문 (PPT 발표자 노트에도 포함)
 
 > PPT를 만들 때 참고하는 문서. 템플릿: `~/Desktop/Ubicomp LAB/template.pptx`
 > 좌측 패널 문구의 원본은 [DESIGN_RATIONALE.md](DESIGN_RATIONALE.md), 시각 자료는 [TEST_DEMO_PLAN.md](TEST_DEMO_PLAN.md)의 GIF
@@ -83,7 +85,7 @@
 | 14 | 노트북·파일 보안 (R-40, R-41) | 좌측 패널 + 우측 GIF | G13, G14 |
 | 15 | 행안부 가이드 대응 (R-38) | 표 | 보안약점 대응 + 테스트 결과 |
 | 16 | 업무 효율 (P-2~P-4) | 큰 숫자 + 막대 그래프 | 업무 시간 N분 → M분, SUS 점수 |
-| 17 | 설계 품질 | 수치 카드 | 자원 사용량, 부하 테스트, 테스트 50/50, CI |
+| 17 | 설계 품질 | 수치 카드 | 자원 사용량, 부하 테스트, 테스트 131개, CI |
 | 18 | RFP가 놓친 문제 7가지 | 번호 카드 7개 | 스스로 발굴한 문제와 해결 |
 | 19 | 평가 기준별 요약 | 4칸 그리드 | 평가 4개 항목 ↔ 우리의 증거 1:1 대응 |
 | 20 | Q&A | 템플릿 Q&A | GitHub URL, QR 코드 |

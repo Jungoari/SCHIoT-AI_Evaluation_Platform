@@ -8,7 +8,7 @@
 
 수업용 폐쇄형 Kaggle — CSV 자동 채점 · 실시간 리더보드 · 관리자 2단계 검증 · 부정 제출 자동 탐지 · 격리 재실행
 
-![tests](https://img.shields.io/badge/tests-101%20passed-22d39a) ![python](https://img.shields.io/badge/python-3.13-2f63ea) ![django](https://img.shields.io/badge/django-5.2-2f63ea) ![docker](https://img.shields.io/badge/docker%20compose-1%20command-2f63ea) ![security](https://img.shields.io/badge/sandbox%20attacks-6%2F6%20blocked-22d39a)
+![tests](https://img.shields.io/badge/tests-131%20passed-22d39a) ![python](https://img.shields.io/badge/python-3.13-2f63ea) ![django](https://img.shields.io/badge/django-5.2-2f63ea) ![docker](https://img.shields.io/badge/docker%20compose-1%20command-2f63ea) ![security](https://img.shields.io/badge/sandbox%20attacks-6%2F6%20blocked-22d39a)
 
 <img src="docs/assets/gifs/G03_submit.gif" alt="제출 → 즉시 채점 → 순위" width="860">
 
@@ -45,7 +45,7 @@ docker compose exec web python manage.py integrity_experiment          # 부정 
 | 역할 | 이메일 | 비밀번호 | 둘러볼 곳 |
 |---|---|---|---|
 | 관리자2 (교수) | `prof@demo.evalhub` | `evalhub-demo-2026` | 대회 개설, 프로젝트 설정, 최종 승인, 감사 로그 위변조 검증 |
-| 관리자1 (조교) | `ta@demo.evalhub` | `evalhub-demo-2026` | 검토 큐 → 무결성 리포트 → 판정 제안, 회원 관리 |
+| 관리자1 (조교) | `ta@demo.evalhub` | `evalhub-demo-2026` | 검토 목록 → 부정 의심 점검 → 의견 제출, 회원 관리 |
 | 참여자 (학생) | `student1@demo.evalhub` ~ `student14@demo.evalhub` | `evalhub-demo-2026` | 제출, 내 점수 추이, 익명 리더보드 |
 
 > 데모 비밀번호는 시연 전용으로 공개된 값입니다. 운영 시 `.env`에서 `DEMO_MODE=false`로 바꾸면 데모 데이터 생성이 차단됩니다.
@@ -92,18 +92,20 @@ RFP에서 추출한 요구사항 **46개 전부 구현**했고, 각 항목은 �
 
 | | |
 |---|---|
-| **G01 대회 개설 · 규격 자동 추론 · 공개** (관리자2)<br><img src="docs/assets/gifs/G01_create_competition.gif" width="420"> | **G02 참여 코드 가입** (코드 없으면 불가)<br><img src="docs/assets/gifs/G02_signup_with_code.gif" width="420"> |
+| **G01 대회 개설 · 규격 자동 추론 · 공개** (관리자2)<br><img src="docs/assets/gifs/G01_create_competition.gif" width="420"> | **G02 참여 코드 가입 → 처음 로그인 사용 안내**<br><img src="docs/assets/gifs/G02_signup_with_code.gif" width="420"> |
 | **G03 제출 → 즉시 채점 → 순위** (1회 차감)<br><img src="docs/assets/gifs/G03_submit.gif" width="420"> | **G04 형식 오류 행 단위 안내** (횟수 미차감)<br><img src="docs/assets/gifs/G04_format_error.gif" width="420"> |
 | **G05 마감 경계** (마감 전 시작·후 완료 = 채점 / 마감 후 = 접수만)<br><img src="docs/assets/gifs/G05_deadline_boundary.gif" width="420"> | **G08 같은 리더보드: 참여자 익명 vs 관리자 실명**<br><img src="docs/assets/gifs/G08_leaderboard_anonymous_vs_real.gif" width="420"> |
 | **G09 관리자1 검토 · 무결성 리포트 · 판정 제안**<br><img src="docs/assets/gifs/G09_admin1_review.gif" width="420"> | **G10 관리자2 부적합 확정 → 다음 기록 · 일괄 승인**<br><img src="docs/assets/gifs/G10_admin2_approve.gif" width="420"> |
 | **G11 부정 제출 적발 + 격리 재실행(I-6)**<br><img src="docs/assets/gifs/G11_cheating_detection.gif" width="420"> | **G12 샌드박스 공격 6종 실측 차단**<br><img src="docs/assets/gifs/G12_sandbox_attacks.gif" width="420"> |
 | **G13 노트북 XSS 무력화** (관리자 세션 보호)<br><img src="docs/assets/gifs/G13_notebook_xss.gif" width="420"> | **G15 권한 우회 차단** (설정·타인 제출물 → 404)<br><img src="docs/assets/gifs/G15_permission_bypass.gif" width="420"> |
-| **G16 감사 로그 위변조 감지**<br><img src="docs/assets/gifs/G16_audit_tamper.gif" width="420"> | **G17 전체 자동화 테스트 101개 통과**<br><img src="docs/assets/gifs/G17_all_tests.gif" width="420"> |
+| **G16 감사 로그 위변조 감지**<br><img src="docs/assets/gifs/G16_audit_tamper.gif" width="420"> | **G17 전체 자동화 테스트 131개 통과**<br><img src="docs/assets/gifs/G17_all_tests.gif" width="420"> |
 | **G18 부정 탐지 실험** (정직 20 · 부정 30)<br><img src="docs/assets/gifs/G18_integrity_experiment.gif" width="420"> | |
 
 ---
 
 ## 역할별 기능 둘러보기
+
+> 화면에서는 RFP 의 관리자1·관리자2 를 **조교·교수**로, 어려운 용어는 쉬운 말로 표시합니다 (예: 검토 큐 → 검토 목록, 감사 로그 → 변경 기록). 처음 로그인하면 **역할별 사용 안내 5단계**가 뜨고, 사이드바 '사용 안내 다시 보기'로 언제든 다시 볼 수 있습니다
 
 ### 참여자
 - 프로젝트별 **남은 제출 횟수·마감까지 남은 시간·내 순위**를 첫 화면에 표시
@@ -113,7 +115,7 @@ RFP에서 추출한 요구사항 **46개 전부 구현**했고, 각 항목은 �
 - 익명 리더보드 (대회별 무작위 별칭, 내 행 강조, 24시간 대비 ▲▼)
 
 ### 관리자1 (조교)
-- **검토 큐**: 참여자별 후보를 최고 점수부터, 무결성 신호등과 함께
+- **검토 목록**: 참여자별 검토 대상을 최고 점수부터, 부정 의심 신호등과 함께
 - **검토 화면**: 격리 노트북 뷰어 + 무결성 리포트 + 같은 참여자 제출 이력 + 판정 제안 (사유 템플릿, 단축키 `J`/`K`/`A`/`R`)
 - 버튼 한 번으로 **I-6 격리 재실행** (가중치로 다시 추론해 제출 CSV와 비교)
 - 회원 관리: 검색, 비활성화, 비밀번호 재설정 링크 발급 (이메일 없이 링크 전달)
@@ -209,7 +211,7 @@ $ python manage.py sandbox_selftest
   S03b  시스템 파일 변조           BLOCKED ✓
   S04   프로세스 폭탄             BLOCKED ✓
   S04b  메모리 폭탄               BLOCKED ✓
-6/6 공격 차단 · 3.6초
+6/6 공격 차단 · 6.6초
 ```
 
 | 가이드 보안약점 | 대응 |
@@ -221,6 +223,7 @@ $ python manage.py sandbox_selftest
 | 부적절한 인가 · 중요정보 노출 | 권한 정책 단일 모듈 + 권한 매트릭스 테스트, 권한 없음은 404, 실명은 서버에서 제외 |
 | 반복 인증 시도 · 취약한 비밀번호 | 로그인 10회·참여 코드 10회 실패 시 15분 제한, Argon2, 10자 이상·흔한 비밀번호 차단 |
 | 오류 메시지 정보노출 · 하드코드된 중요정보 | 추적 ID만 표시, 로그 비밀값 마스킹, `.env` 분리 |
+| 취약한 라이브러리 | `pip-audit` 웹·샌드박스 라이브러리 취약점 0건, CI 에서 발견 시 빌드 실패 · 샌드박스 버전 고정 |
 
 ---
 
@@ -234,6 +237,16 @@ $ python manage.py sandbox_selftest
 | 정답 파일 오류 | 정답 교체 → 자동 전체 재채점 (감사 로그 기록) |
 | 업로드만 시작하고 중단 | 유예 시간이 지나면 티켓 만료, 슬롯 자동 반환 |
 | 무한 루프·메모리 폭탄 노트북 | 샌드박스 시간·메모리·PID 제한으로 강제 종료 |
+
+---
+
+## 서버 배포
+
+VM 1대 + Docker + Caddy(HTTPS 자동) 구성, 약 30분 — 단계별 명령·`.env` 필수 변경값·백업/복구·배포 후 점검표: [docs/DEPLOY.md](docs/DEPLOY.md)
+
+- web 은 `127.0.0.1` 에만 열고 외부는 HTTPS 프록시로만 접속
+- 프록시 뒤에서도 실패 횟수 제한이 **접속자별로** 동작 (`TRUSTED_PROXY_COUNT` — 설정하지 않으면 위조 가능한 헤더는 무시)
+- `manage.py check --deploy` 경고 0건 (의도된 3건은 사유를 코드에 기록)
 
 ---
 
@@ -256,10 +269,17 @@ $ python manage.py sandbox_selftest
 ├── docker-compose.yml          # web · worker · sandbox-worker · db · redis
 ├── .env.example                # 환경 변수 예시 (실제 .env 는 커밋 금지)
 ├── sandbox/                    # 참여자 노트북 격리 실행 이미지 (Dockerfile, run.py)
-├── docs/                       # 기획·보안·성능·탐지 실험·요구사항 추적·발표 가이드
+├── docs/                       # 기획·보안·성능·탐지 실험·요구사항 추적·배포·사용성 테스트·발표 가이드
 │   ├── adr/                    # 설계 결정 기록 5건
+│   ├── usability/              # 사용성 테스트 기록 양식 (SUS·과제·업무 시간)
 │   └── assets/gifs/            # 테스트 케이스 시연 GIF 15개
-├── scripts/record_gifs/        # Playwright 시나리오 → GIF 자동 녹화 (record.py, overlay.js)
+├── presentation/               # 발표 자료 (.pptx 발표자 노트 포함 · PowerPoint 없는 PC 용 PDF 백업)
+├── scripts/
+│   ├── record_gifs/            # Playwright 시나리오 → GIF 자동 녹화 (record.py, overlay.js)
+│   ├── build_presentation.py   # 발표 자료 생성 · pptx_preview.py 슬라이드 미리보기
+│   ├── presentation_notes.py   # 발표 대본(15분) → 발표자 노트 + docs/PRESENTATION_SCRIPT.md
+│   ├── loadtest.py             # 50명 동시 제출 부하 테스트
+│   └── usability_report.py     # SUS·과제·업무 시간 기록 → README 표
 └── web/                        # Django 프로젝트
     ├── config/                 # 설정 (환경 변수 기반, 안전한 기본값)
     ├── apps/
@@ -281,7 +301,7 @@ $ python manage.py sandbox_selftest
 ## 테스트
 
 ```bash
-cd web && ../.venv/bin/pytest            # 101개 — 경계값·동시성·권한 매트릭스·보안·부정 탐지·HTTP 흐름
+cd web && ../.venv/bin/pytest            # 131개 — 경계값·동시성·권한 매트릭스·보안·부정 탐지·HTTP 흐름·접근성·쿼리 수·사용 안내
 ../.venv/bin/python manage.py sandbox_selftest   # 샌드박스 공격 6종 실측 (compose: sandbox-worker 컨테이너에서)
 ../.venv/bin/python manage.py integrity_experiment --rerun   # 부정 탐지 실험 (정직 20 · 부정 30)
 ```
@@ -293,6 +313,21 @@ cd web && ../.venv/bin/pytest            # 101개 — 경계값·동시성·권�
 | 리더보드 | 공동 순위 1·1·3 · 낮을수록 좋은 지표 · 참여자 응답에 실명 없음 |
 | 검증 흐름 | 동점이면 최신부터 · 제안만으로 순위 유지 · 부적합 → 다음 기록 · 관리자1의 승인 시도 차단 |
 | 보안 | 노트북 XSS 제거 · `.exe` 위장 CSV · 경로 조작 파일명 · CSV 수식 주입 · 감사 로그 변조 감지 |
+
+---
+
+## 사용성 검증
+
+실제 사용자(학과 동기)가 과제 4개를 수행하고 SUS 설문(표준 사용성 점수)에 답하는 방식 — 진행 가이드: [docs/USABILITY_TEST.md](docs/USABILITY_TEST.md)
+
+```bash
+docker compose exec web python manage.py usability_kit --out /data/usability_kit   # 테스터용 참여 코드 + 제출 파일(정상·오류)
+python scripts/usability_report.py sus.csv tasks.csv time.csv   # 결과 → 이 절에 붙일 표
+```
+
+> 결과는 테스트 진행 후 이 자리에 추가
+
+**접근성 (WCAG 2.1 AA)** — 글자 대비·입력 라벨·키보드 포커스·본문 바로가기·휴대폰 화면(375px)을 점검해 13건을 수정하고, 라벨 누락·id 중복은 자동화 테스트로 막았다 → [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md)
 
 ---
 

@@ -3,7 +3,7 @@
 {% block eyebrow %}<p class="mb-1.5 text-sm text-muted">{{ competition.title }} · {{ project.title }}</p>{% endblock %}
 {% block heading %}최종 성적{% endblock %}
 {% block actions %}
-<a href="{% url 'review:queue' project.pk %}" class="btn-secondary">검토 큐</a>
+<a href="{% url 'review:queue' project.pk %}" class="btn-secondary">검토 목록</a>
 <a href="{% url 'competitions:results_export' project.pk %}" class="btn-primary">{% include "partials/icon.html" with name="download" cls="h-4 w-4" %}CSV 내보내기</a>
 {% endblock %}
 {% block content %}
@@ -33,5 +33,5 @@
   </table>
   </div>
 </section>
-<p class="mt-3 text-xs text-muted">검증 통과된 대표 기록끼리 최종 순위를 매깁니다 (동점 공동 순위). 내보낸 CSV는 엑셀 수식 주입이 방지됩니다</p>
+<p class="mt-3 text-xs text-muted">검토 통과된 대표 기록끼리 최종 순위를 매깁니다 (동점 공동 순위). 내보낸 CSV는 엑셀에서 안전하게 열립니다</p>
 {% endblock %}

@@ -135,6 +135,10 @@ def login_state(browser, email):
     page.fill("input[name=password]", PW)
     page.press("input[name=password]", "Enter")
     page.wait_for_url("**/dashboard/")
+    # 처음 로그인 사용 안내가 뜨면 건너뛰기 (녹화 화면을 가리지 않도록 — 안내 자체는 G02 에서 시연)
+    if page.locator("[data-testid=tutorial]").count():
+        with page.expect_response("**/accounts/tutorial/done/"):
+            page.click("[data-tutorial-skip]")
     _STATES[email] = ctx.storage_state()
     ctx.close()
     return _STATES[email]
@@ -203,7 +207,7 @@ def g01_create(browser):
     _, test = demo.digits_frames()
     test.to_csv(d / "digits_test_with_labels.csv", index=False)
     with Recording(browser, "G01_create_competition", email("prof")) as r:
-        r.caption("TC-A04", "관리자2 · 대회 개설과 참여 코드 자동 발급", "참여자 코드·운영 코드가 자동 생성되고 한 번만 표시", "RFP p.3")
+        r.caption("TC-A04", "교수 · 대회 개설과 참여 코드 자동 발급", "참여자 코드·운영 코드가 자동 생성되고 한 번만 표시", "RFP p.3")
         r.click("text=대회 개설")
         r.type("input[name=title]", "2026-2 딥러닝 중간 프로젝트")
         r.type("textarea[name=description]", "CNN 없이 픽셀 특성만으로 숫자를 분류합니다", delay=25)
@@ -211,27 +215,27 @@ def g01_create(browser):
         expect(r.page.locator("[data-testid=participant-code]")).to_have_text(re.compile(r"^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$"))
         r.passed("참여자·운영 코드 발급 (해시로만 저장)", hold=1.6)
         r.click("text=대회 홈으로")
-        r.caption("TC-D", "프로젝트 추가 → 정답 포함 테스트셋 업로드", "ID 열·정답 열·분류/회귀·허용 레이블·행 수 자동 추론", "RFP p.5")
+        r.caption("TC-D", "프로젝트 추가 → 정답 파일 업로드", "ID 열·정답 열·분류/회귀·허용 레이블·행 수 자동 분석", "RFP p.5")
         r.click("a:has-text('프로젝트 추가')")
         r.type("input[name=title]", "숫자 분류")
         r.click("button:has-text('다음')", wait=1)
         r.page.set_input_files("input[name=testset]", str(d / "digits_test_with_labels.csv"))
         r.click("button:has-text('업로드')", wait=1.2)
-        r.scroll_to("text=자동 추론 결과 확인", wait=1.5)
-        expect(r.page.locator("text=자동 추론 결과 확인")).to_be_visible()
-        r.click("button:has-text('규격 확정')", wait=1.2)
-        r.caption("TC-B05", "마감일·횟수 설정 후 공개", "정답 열이 제거된 배포 파일이 자동 생성되고 공개 가능", "RFP p.4~5")
+        r.scroll_to("text=자동 분석 결과 확인", wait=1.5)
+        expect(r.page.locator("text=자동 분석 결과 확인")).to_be_visible()
+        r.click("button:has-text('형식 확정')", wait=1.2)
+        r.caption("TC-B05", "마감일·횟수 설정 후 공개", "정답 열이 제거된 학생용 자료이 자동 생성되고 공개 가능", "RFP p.4~5")
         r.scroll_to("#deadlines")
         r.page.fill("input[name=due_at]", (timezone.localtime() + timedelta(days=7)).strftime("%Y-%m-%dT18:00"))
         r.click("#deadlines button:has-text('추가')", wait=1.2)
         r.scroll_to("#files", wait=1.4)
-        expect(r.page.locator("#files")).to_contain_text("테스트 특성 (정답 제외)")
+        expect(r.page.locator("#files")).to_contain_text("평가용 입력 데이터 (정답 제외)")
         r.click("button:has-text('참여자에게 공개')", wait=1)
-        r.passed("규격 자동 추론 · 배포 파일 자동 생성 · 공개")
+        r.passed("형식 자동 분석 · 학생용 자료 자동 생성 · 공개")
 
 
 def g02_signup(browser):
-    """G02 참여 코드 가입 (코드 없으면 불가)"""
+    """G02 참여 코드 가입 (코드 없으면 불가) → 처음 로그인 사용 안내"""
     from apps.competitions.models import Competition, JoinCode, Role
 
     comp = Competition.objects.get(title="2026-2 머신러닝 기말 프로젝트")
@@ -245,13 +249,20 @@ def g02_signup(browser):
         r.click("button:has-text('가입하고')", wait=1)
         expect(r.page.locator(".field-error").first).to_be_visible()
         r.blocked("코드 없이는 가입할 수 없음", hold=1.6)
-        r.caption("TC-A01", "관리자에게 받은 참여 코드로 가입", "가입과 동시에 대회 참여 · 익명 별칭 자동 부여", "RFP p.3")
+        r.caption("TC-A01", "관리자에게 받은 참여 코드로 가입", "가입과 동시에 대회 참여 · 익명 이름 자동 부여", "RFP p.3")
         r.type("input[name=join_code]", code, delay=60)
         r.page.fill("input[name=password1]", "secure-pass-2026")
         r.page.fill("input[name=password2]", "secure-pass-2026")
         r.click("button:has-text('가입하고')", wait=1.4)
         expect(r.page.locator("body")).to_contain_text("2026-2 머신러닝 기말 프로젝트")
-        r.passed("가입 + 대회 참여 완료")
+        r.passed("가입 + 대회 참여 완료", hold=1.4)
+        r.caption("TC-A07", "처음 로그인 · 역할별 사용 안내", "학생·조교·교수마다 다른 5단계 안내, 끝내면 다시 뜨지 않음", "사용성")
+        expect(r.page.locator("[data-testid=tutorial]")).to_be_visible()
+        for _ in range(4):
+            r.click("[data-tutorial-next]", wait=1.1)
+        r.click("[data-tutorial-finish]", wait=1.0)
+        expect(r.page.locator("[data-testid=tutorial]")).to_have_count(0)
+        r.passed("사용 안내 완료 → 대시보드")
 
 
 def g03_submit(browser):
@@ -338,10 +349,10 @@ def g05_deadline(browser):
 def g08_leaderboard(browser):
     """G08 같은 리더보드: 참여자(익명) vs 관리자(실명) — 두 영상을 나란히"""
     pid = project_id("손글씨 숫자 분류")
-    for who, label, tc in (("student2", "참여자 화면 — 익명 별칭만 (실명은 응답에 아예 없음)", "참여자"),
-                           ("ta", "관리자 화면 — 실명·학번", "관리자1")):
+    for who, label, tc in (("student2", "참여자 화면 — 익명 이름만 (실명은 응답에 아예 없음)", "참여자"),
+                           ("ta", "관리자 화면 — 실명·학번", "조교")):
         with Recording(browser, f"_G08_{who}", email(who), f"/p/{pid}/leaderboard/") as r:
-            r.caption("TC-E01", label, "동점 공동 순위 · 검증 상태 · 24시간 대비 ▲▼", tc)
+            r.caption("TC-E01", label, "동점 공동 순위 · 검토 상태 · 24시간 대비 ▲▼", tc)
             r.pause(1.2)
             r.page.mouse.wheel(0, 260)
             r.pause(2.2)
@@ -374,16 +385,16 @@ def g09_review(browser):
     r9 = Review.objects.get(submission__user__name="한예준", submission__project__title="손글씨 숫자 분류")
     pid = project_id("손글씨 숫자 분류")
     with Recording(browser, "G09_admin1_review", email("ta"), f"/p/{pid}/review/") as r:
-        r.caption("TC-F01", "관리자1 · 검토 큐 — 참여자별 최고 점수 기록부터", "무결성 신호등으로 볼 곳을 먼저 확인", "RFP p.6, p.8")
+        r.caption("TC-F01", "조교 · 검토 목록 — 참여자별 최고 점수 기록부터", "부정 점검 신호등으로 볼 곳을 먼저 확인", "RFP p.6, p.8")
         r.pause(1.8)
         r.click(f"a[href='/review/{r9.pk}/']", wait=1.5)
         r.scroll_to("[data-testid=integrity]", wait=1.8)
         expect(r.page.locator("[data-testid=integrity]")).to_contain_text("부분 복사 패턴")
-        r.caption("TC-F02", "판정 제안 (부적합) — 사유 템플릿 원클릭", "제안만으로는 순위에서 빠지지 않음", "RFP p.6")
+        r.caption("TC-F02", "검토 의견 (부적합) — 사유 템플릿 원클릭", "제안만으로는 순위에서 빠지지 않음", "RFP p.6")
         r.click("label:has-text('부적합')")
         r.click("button[data-reason='다른 참여자 제출과 예측값이 사실상 동일']")
-        r.click("button:has-text('판정 제안')", wait=1.4)
-        r.passed("부적합 제안 → 관리자2 승인 대기")
+        r.click("button:has-text('의견 제출')", wait=1.4)
+        r.passed("부적합 제안 → 교수 승인 대기")
 
 
 def g10_approve(browser):
@@ -393,12 +404,12 @@ def g10_approve(browser):
     r8 = Review.objects.get(submission__user__name="오지우", submission__project__title="손글씨 숫자 분류")
     pid = project_id("손글씨 숫자 분류")
     with Recording(browser, "G10_admin2_approve", email("prof"), f"/review/{r8.pk}/") as r:
-        r.caption("TC-F03", "관리자2 · 부적합 확정", "해당 기록 제외 → 같은 참여자의 다음 기록이 자동으로 검토 큐에", "RFP p.6")
+        r.caption("TC-F03", "교수 · 부적합 확정", "해당 기록 제외 → 같은 참여자의 다음 기록이 자동으로 검토 목록에", "RFP p.6")
         r.scroll_to("button:has-text('부적합 확정')", wait=1.4)
         r.click("button:has-text('부적합 확정')", wait=1.6)
-        expect(r.page.locator("body")).to_contain_text("다음 기록이 검토 큐에 추가")
+        expect(r.page.locator("body")).to_contain_text("다음 기록이 검토 목록에 추가")
         r.passed("다음 기록 자동 상정", hold=1.6)
-        r.caption("TC-F04", "관리자1이 '적합' 제안한 기록 일괄 승인", "대표 기록·성적 확정", "RFP p.6")
+        r.caption("TC-F04", "조교가 '적합' 제안한 기록 일괄 승인", "대표 기록·성적 확정", "RFP p.6")
         boxes = r.page.locator("input[name=review]")
         if boxes.count():
             r.click(boxes.first, wait=0.6)
@@ -418,11 +429,11 @@ def g11_integrity(browser):
         r.caption("TC-I07", "코드·가중치는 그대로, CSV만 수정한 제출", "I-7 결과만 바뀐 제출 🔴", "RFP p.8 ★")
         r.scroll_to("[data-testid=integrity]", wait=1.6)
         r.caption("TC-I04", "격리 컨테이너에서 가중치로 다시 추론", "제출 CSV와 일치율이 낮으면 🔴", "RFP p.8 ★")
-        r.click("button:has-text('재실행')", wait=0.5)
+        r.click("button:has-text('다시 실행')", wait=0.5)
         r.page.wait_for_load_state("networkidle")
         r.scroll_to("[data-testid=integrity]", wait=1.2)
         expect(r.page.locator("[data-testid=integrity]")).to_contain_text("일치합니다")
-        r.passed("재실행 일치율 97% → 수기 수정 의심", hold=1.8)
+        r.passed("다시 실행 일치율 97% → 수기 수정 의심", hold=1.8)
         r.caption("TC-I03", "예측값을 코드에 직접 적은 노트북", "AST 분석으로 상수 목록 탐지 🔴", "RFP p.8 ★")
         r.go(f"/review/{rid('임수아')}/", wait=0.4)
         r.scroll_to("[data-testid=integrity]", wait=1.8)
@@ -487,10 +498,10 @@ def g16_audit(browser):
 
     comp_id = AuditLog.objects.exclude(competition=None).first().competition_id
     with Recording(browser, "G16_audit_tamper", email("prof"), f"/c/{comp_id}/audit/") as r:
-        r.caption("TC-S11", "감사 로그 해시 체인 검증", "모든 판정·설정 변경이 체인으로 연결", "RFP p.7")
+        r.caption("TC-S11", "변경 기록 해시 체인 검증", "모든 판정·설정 변경이 체인으로 연결", "RFP p.7")
         r.pause(1)
-        r.click("a:has-text('위변조 검증')", wait=1.4)
-        expect(r.page.locator("body")).to_contain_text("검증 통과")
+        r.click("a:has-text('조작 여부 확인')", wait=1.4)
+        expect(r.page.locator("body")).to_contain_text("확인 완료")
         r.passed("체인 정상", hold=1.4)
         r.caption("TC-S11", "누군가 DB에서 판정 기록 하나를 몰래 수정", "위변조 지점을 정확히 찾아냄", "RFP p.7")
         victim = AuditLog.objects.filter(action__startswith="review").order_by("id").first() or AuditLog.objects.order_by("id")[3]
@@ -498,7 +509,7 @@ def g16_audit(browser):
         AuditLog.objects.filter(pk=victim.pk).update(summary="(조작) 부적합 → 적합으로 변경")
         try:
             r.go(f"/c/{comp_id}/audit/?verify=1", wait=1.4)
-            expect(r.page.locator("body")).to_contain_text("위변조 감지")
+            expect(r.page.locator("body")).to_contain_text("조작 감지")
             r.blocked(f"기록 #{victim.pk} 조작 감지", hold=2.4)
         finally:
             AuditLog.objects.filter(pk=victim.pk).update(summary=original)
@@ -583,7 +594,7 @@ def g18_experiment(browser):
     assert any("100%" in k for k in keep)
     terminal_gif(browser, "G18_integrity_experiment", "integrity_experiment — 정직 20 · 부정 30 탐지 실험",
                  "python manage.py integrity_experiment", ["", *keep[:8], "", *keep[8:]], "TC-I05",
-                 "무결성 리포트 탐지 실험 (DB 변경 없이 롤백)", "부정 30/30 탐지 · 정직 오탐 1/20", delay=380)
+                 "부정 의심 점검 탐지 실험 (DB 변경 없이 롤백)", "부정 30/30 탐지 · 정직 오탐 1/20", delay=380)
 
 
 SCENARIOS = {

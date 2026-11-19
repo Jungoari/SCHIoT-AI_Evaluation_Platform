@@ -63,6 +63,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # 프록시 뒤 실제 접속자 IP 복원 — 다른 모든 미들웨어(axes·횟수 제한·감사 로그)보다 먼저
+    "apps.core.middleware.TrustedProxyMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "apps.core.middleware.RequestIdMiddleware",
@@ -91,6 +93,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.core.context_processors.site",
+                "apps.core.tutorial.context",  # 처음 로그인 시 역할별 사용 안내
             ],
         },
     },
@@ -162,9 +165,18 @@ CSRF_COOKIE_SECURE = SECURE_COOKIES
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"
+# 리버스 프록시(Caddy·nginx) 개수. 0 이면 X-Forwarded-* 헤더를 전혀 믿지 않는다 (직접 노출 시 위조 방지)
+TRUSTED_PROXY_COUNT = env_int("TRUSTED_PROXY_COUNT", 0)
+
 if env_bool("SECURE_HSTS", False):
     SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30
+if TRUSTED_PROXY_COUNT > 0 or env_bool("SECURE_HSTS", False):
+    # 프록시가 HTTPS 를 처리하고 http 로 넘겨줄 때, 원래 요청이 https 였음을 인식
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # check --deploy 경고 중 의도된 것 (docs/DEPLOY.md)
+    #  W008: http→https 전환은 프록시(Caddy)가 처리
+    #  W005·W021: HSTS 를 하위 도메인·preload 목록까지 강제하면 학교 도메인의 다른 서비스에 영향 → 사용 안 함
+    SILENCED_SYSTEM_CHECKS = ["security.W008", "security.W005", "security.W021"]
 
 # ---------------------------------------------------------------------------
 # 국제화

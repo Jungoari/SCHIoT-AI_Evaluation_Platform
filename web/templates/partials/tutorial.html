@@ -1,0 +1,42 @@
+<!-- 처음 로그인했을 때 역할별 사용 안내 (apps/core/tutorial.py). 단계 넘김은 static/js/tutorial.js -->
+<div id="tutorial" class="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4" data-testid="tutorial"
+     role="dialog" aria-modal="true" aria-labelledby="tutorial-title" data-role="{{ tutorial.role }}">
+  <div class="card w-full max-w-lg p-7 shadow-[var(--shadow-pop)]">
+    <div class="flex items-center justify-between">
+      <span class="badge-blue">사용 안내 · {{ tutorial.role_title }}</span>
+      <span class="text-sm text-muted tabular" aria-live="polite"><span data-tutorial-now>1</span> / {{ tutorial.steps|length }}</span>
+    </div>
+
+    <!-- 단계마다 글 길이가 달라도 버튼 위치가 움직이지 않도록 높이 고정 -->
+    <div class="min-h-[15rem]">
+    {% for icon, title, lines in tutorial.steps %}
+    <section class="mt-5{% if not forloop.first %} hidden{% endif %}" data-tutorial-step="{{ forloop.counter0 }}">
+      <div class="flex items-center gap-3">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-100 text-brand-700">
+          {% include "partials/icon.html" with name=icon cls="h-6 w-6" %}
+        </span>
+        <h2 class="text-xl font-bold" {% if forloop.first %}id="tutorial-title"{% endif %}>{{ title }}</h2>
+      </div>
+      <ul class="mt-4 space-y-2.5 text-[15px] leading-relaxed text-ink-2">
+        {% for line in lines %}<li class="flex gap-2"><span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500"></span><span>{{ line }}</span></li>{% endfor %}
+      </ul>
+    </section>
+    {% endfor %}
+    </div>
+
+    <!-- 진행 표시 점 -->
+    <div class="mt-6 flex justify-center gap-1.5" aria-hidden="true">
+      {% for _ in tutorial.steps %}<span class="h-1.5 w-6 rounded-full {% if forloop.first %}bg-brand-600{% else %}bg-line{% endif %}" data-tutorial-dot></span>{% endfor %}
+    </div>
+
+    <!-- 완료 기록: 스크립트가 있으면 fetch 로, 없으면 이 폼 버튼으로 -->
+    <form method="post" action="{% url 'accounts:tutorial_done' %}" class="mt-6 flex items-center gap-2" data-tutorial-form>
+      {% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
+      <button type="submit" class="btn-ghost" data-tutorial-skip>건너뛰기</button>
+      <span class="flex-1"></span>
+      <button type="button" class="btn-secondary hidden" data-tutorial-prev>이전</button>
+      <button type="button" class="btn-primary" data-tutorial-next>다음</button>
+      <button type="submit" class="btn-primary hidden" data-tutorial-finish>시작하기</button>
+    </form>
+  </div>
+</div>

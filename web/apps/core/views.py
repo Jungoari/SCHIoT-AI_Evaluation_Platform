@@ -80,9 +80,9 @@ def admin_todos(user, competitions) -> list[dict]:
 def role_label(user) -> str:
     """현재 계정의 권한 표시 (대회마다 역할이 다를 수 있어 모두 나열)"""
     if permissions.is_admin2(user):
-        return "관리자2 · 총괄"
+        return "교수 · 총괄"
     roles = {m.get_role_display() for m in user.memberships.filter(is_active=True)}
-    order = ["관리자1", "참여자"]
+    order = ["조교", "참여자"]
     return " · ".join(r for r in order if r in roles) or "소속 대회 없음"
 
 

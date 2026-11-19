@@ -8,13 +8,13 @@
     {% csrf_token %}
     {% include "partials/field.html" with field=form.title %}
     {% include "partials/field.html" with field=form.description %}
-    <div class="grid gap-5 sm:grid-cols-2">
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
       {% include "partials/field.html" with field=form.metric %}
       {% include "partials/field.html" with field=form.direction %}
       {% include "partials/field.html" with field=form.decimals %}
       {% include "partials/field.html" with field=form.grace_minutes %}
     </div>
-    <button class="btn-primary w-full py-3">다음: 테스트셋 · 마감일 설정</button>
+    <button class="btn-primary w-full py-3">다음: 정답 파일 · 마감일 설정</button>
   </form>
 </section>
 {% endblock %}

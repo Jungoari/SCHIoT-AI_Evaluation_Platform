@@ -1,14 +1,15 @@
 # 정원에게 확인할 것 · 운영진 질의 목록
 
+> 제출까지 해야 할 일을 순서대로: [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md) (GitHub 업로드 명령 · 운영진 질문 붙여넣기용 · 마감 전 점검)
+
 > 개발을 멈추지 않기 위해 아래 항목은 **합리적인 기본값으로 먼저 구현**해 두었다. 답에 따라 설정만 바꾸면 된다.
 
 ## A. 정원이 결정할 것
 
 | # | 질문 | 현재 구현 (기본값) | 바꾸려면 |
 |---|---|---|---|
-| A1 | 라이브 데모를 어디에 배포할까? (비용 발생 OK 확인함) | 미배포. 로컬 `docker compose up` 으로 완전 동작 | Docker 가 되는 VM 필요 (샌드박스 때문에 일반 PaaS 불가). 후보: AWS Lightsail / Oracle Cloud / 학교 서버 |
+| A1 | 라이브 데모를 어디에 배포할까? (비용 발생 OK 확인함) | 미배포. 로컬 `docker compose up` 으로 완전 동작. **배포 절차는 [DEPLOY.md](DEPLOY.md) 에 준비 완료** | Docker 가 되는 VM 필요 (샌드박스 때문에 일반 PaaS 불가). 후보: Oracle Cloud 무료 / AWS Lightsail 약 $24 / 학교 서버 |
 | A2 | 팀원 있음? (일정·발표 분담) | 1인 기준 | — |
-| A3 | 지금까지 작업을 커밋할까? | 커밋 안 함 (첫 커밋 이후 변경 전부 미커밋) | 승인하면 기능 단위로 나눠 커밋 |
 | A4 | GitHub 저장소 이름·공개 여부 | 미생성 | `gh` CLI 설치 또는 GitHub 웹에서 생성 |
 | A5 | 데모 대회 이름·과제 구성 그대로 괜찮은가 | "2026-2 머신러닝 기말 프로젝트" (손글씨 숫자 분류 / 당뇨 진행도 회귀) | `web/apps/core/demo.py` |
 
@@ -32,7 +33,10 @@
 | RFP 필수 기능 46개 | ✅ 구현·테스트 완료 |
 | 테스트 시연 GIF | ✅ 15개 녹화 완료 (`docs/assets/gifs`), 동시 제출(C04)·시스템 오류(C03)·위장 파일(S06)은 자동화 테스트와 G17로 증명 |
 | 발표 자료 (템플릿 기반) | ✅ 초안 20장 (`presentation/`, `scripts/build_presentation.py`) — 자체 미리보기로 점검 완료, 최종은 PowerPoint 에서 확인 권장 |
-| 사용성 테스트 (동기 3~5명) · 업무 시간 측정 | ⬜ 정원이 진행 필요 (사람 대상) |
+| 사용성 테스트 (동기 3~5명) · 업무 시간 측정 | 🟨 준비물 완료 — `usability_kit` 명령, 진행 가이드 [USABILITY_TEST.md](USABILITY_TEST.md), 결과 표 생성 스크립트. **진행은 정원 (사람 대상)** |
 | 부하 테스트 · 자원 사용량 측정 | ✅ 50명 동시 제출 50/50, 중앙값 2.85초 (`docs/PERFORMANCE.md`) |
-| 라이브 배포 | ⬜ A1 결정 후 |
+| 라이브 배포 | 🟨 가이드·설정 준비 완료, 새 Docker 스택에서 배포 설정까지 검증 ([DEPLOY.md](DEPLOY.md) 8장). 서버 선택(A1) 후 30분 |
 | 부정 탐지 실험 · ADR · 새 PC 실행 검증 | ✅ (`docs/INTEGRITY_EXPERIMENT.md`, `docs/adr/`, `.env.example` 로 처음부터 실행 확인) |
+| 발표 대본 · 예상 질문 | ✅ [PRESENTATION_SCRIPT.md](PRESENTATION_SCRIPT.md) (약 13분 20초, PPT 발표자 노트 포함) |
+| 접근성 점검 (WCAG AA) · 휴대폰 화면 | ✅ 13건 수정, 자동화 테스트 5개, 점검 중 발견한 500 오류 수정 ([ACCESSIBILITY.md](ACCESSIBILITY.md)) |
+| 발표 자료 PDF 백업 | ✅ `presentation/AI모델_성능평가_자동화_발표_백업.pdf` (PowerPoint 없는 PC 대비) |

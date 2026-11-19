@@ -82,9 +82,9 @@ def _rank(project, subs: list[Submission]) -> list[tuple[int, Submission]]:
 
 
 STATE_LABELS = {
-    "pending": "검증 대기",
+    "pending": "검토 전",
     Review.State.PROPOSED: "검토 중",
-    Review.State.APPROVED: "검증 통과",
+    Review.State.APPROVED: "검토 통과",
 }
 
 
@@ -109,7 +109,7 @@ def standings(project) -> list[Row]:
         rows.append(Row(
             rank=rank, user_id=sub.user_id, name=sub.user.name, alias=aliases.get(sub.user_id, "익명"),
             student_no=sub.user.student_no, score=sub.score, score_text=f"{sub.score:.{project.decimals}f}",
-            submission=sub, state=state, state_label=STATE_LABELS.get(state, "검증 대기"),
+            submission=sub, state=state, state_label=STATE_LABELS.get(state, "검토 전"),
             attempts=attempts.get(sub.user_id, 0), change=(prev - rank) if prev is not None else None,
         ))
     return rows

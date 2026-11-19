@@ -3,8 +3,11 @@ from django.contrib.auth import login
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
+from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods
 
 from apps.audit.services import record
@@ -77,3 +80,18 @@ def join(request):
             return redirect("core:dashboard")
     return render(request, "accounts/join.html", {"form": form})
 
+
+@login_required
+@require_http_methods(["POST"])
+def tutorial_done(request):
+    """사용 안내를 끝냈거나 건너뜀 → 다음 로그인부터 자동으로 띄우지 않음"""
+    if request.user.tutorial_done_at is None:
+        request.user.tutorial_done_at = timezone.now()
+        request.user.save(update_fields=["tutorial_done_at"])
+    if request.headers.get("X-Requested-With") == "fetch":
+        return HttpResponse(status=204)
+    # 스크립트 없이 폼으로 보낸 경우: 보던 화면으로 (같은 사이트 주소만 허용 — 열린 리디렉트 방지)
+    nxt = request.POST.get("next", "")
+    if not url_has_allowed_host_and_scheme(nxt, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        nxt = "/dashboard/"
+    return redirect(nxt)

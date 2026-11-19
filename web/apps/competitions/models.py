@@ -35,7 +35,7 @@ class Competition(models.Model):
 
 class Role(models.TextChoices):
     PARTICIPANT = "participant", "참여자"
-    ADMIN1 = "admin1", "관리자1"
+    ADMIN1 = "admin1", "조교"
 
 
 # 혼동되는 문자(0/O, 1/I/L)를 뺀 32자 → 12자리 코드 = 60비트 엔트로피
@@ -120,7 +120,7 @@ class Membership(models.Model):
     competition = models.ForeignKey(Competition, on_delete=models.CASCADE, related_name="memberships")
     role = models.CharField(max_length=20, choices=Role.choices)
     # 무작위 생성 → 사용자 ID로 역추적 불가
-    alias = models.CharField("익명 별칭", max_length=40)
+    alias = models.CharField("익명 이름", max_length=40)
     is_active = models.BooleanField("활성", default=True)
     joined_at = models.DateTimeField(auto_now_add=True)
 
@@ -158,7 +158,7 @@ class Project(models.Model):
     label_file = models.CharField(max_length=100, blank=True)
     label_sha256 = models.CharField(max_length=64, blank=True)
 
-    grace_minutes = models.PositiveIntegerField("업로드 유예 시간(분)", default=30)
+    grace_minutes = models.PositiveIntegerField("마감 후 업로드 허용 시간(분)", default=30)
     is_published = models.BooleanField("공개", default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -209,9 +209,9 @@ class ProjectFile(models.Model):
 
     class Kind(models.TextChoices):
         TRAIN = "train", "학습 데이터"
-        TEST_FEATURES = "test_features", "테스트 특성 (정답 제외)"
-        SAMPLE_SUBMISSION = "sample_submission", "샘플 제출 파일"
-        TEMPLATE_NOTEBOOK = "template_notebook", "템플릿 노트북"
+        TEST_FEATURES = "test_features", "평가용 입력 데이터 (정답 제외)"
+        SAMPLE_SUBMISSION = "sample_submission", "제출 예시 파일"
+        TEMPLATE_NOTEBOOK = "template_notebook", "예시 노트북"
         EXTRA = "extra", "기타"
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="files")

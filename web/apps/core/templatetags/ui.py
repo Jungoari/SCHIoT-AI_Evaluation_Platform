@@ -19,9 +19,9 @@ SUBMISSION_BADGES = {
 }
 
 REVIEW_BADGES = {
-    "pending": ("badge-slate", "검증 대기"),
+    "pending": ("badge-slate", "검토 전"),
     "proposed": ("badge-blue", "검토 중"),
-    "approved": ("badge-green", "검증 통과"),
+    "approved": ("badge-green", "검토 통과"),
     "rejected": ("badge-red", "부적합"),
 }
 
@@ -68,9 +68,16 @@ def get_item(d, key):
 
 @register.filter
 def score(value, decimals=4):
-    if value is None:
+    """
+    점수 표시. 값이 없으면 '-'
+    템플릿에서 없는 객체의 속성(예: 아직 채점된 제출이 없을 때 best.score)은 None 이 아니라 '' 로 넘어오므로 함께 처리
+    """
+    if value is None or value == "":
         return "-"
-    return f"{value:.{int(decimals)}f}"
+    try:
+        return f"{float(value):.{int(decimals)}f}"
+    except (TypeError, ValueError):
+        return "-"
 
 
 @register.filter

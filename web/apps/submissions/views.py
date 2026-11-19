@@ -63,7 +63,7 @@ def _own_submission(request, pk) -> Submission:
 def submit_upload(request, pk):
     sub = Submission.objects.select_related("project__competition").filter(pk=pk, user=request.user).first()
     if sub is None:
-        return _json_error("업로드 티켓을 찾을 수 없습니다", 404)
+        return _json_error("업로드 정보를 찾을 수 없습니다", 404)
     files = {k: request.FILES.get(k) for k in ("csv", "notebook", "weights")}
     try:
         sub = complete_upload(sub, files, request.POST.get("comment", ""), request)

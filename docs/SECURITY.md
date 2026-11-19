@@ -55,8 +55,11 @@ python manage.py sandbox_selftest   # 결과: 6/6 공격 차단
 | 세션 | HttpOnly·SameSite=Lax·(HTTPS 시) Secure, 8시간 만료, 로그인 시 세션 ID 재발급, 로그아웃은 POST만 |
 | 참여 코드 | `secrets` 12자리(60비트), SHA-256 해시만 저장, 원문은 발급 화면에 한 번만 |
 | 비밀 설정 | `.env`(gitignore), 저장소에는 `.env.example`만 |
+| 의존성 취약점 | `pip-audit` — 웹 서버 라이브러리·샌드박스 이미지 52개 모두 알려진 취약점 0건 (2026-11-19). CI 에서 취약점 발견 시 빌드 실패 |
+| 샌드박스 재현성 | 샌드박스 라이브러리 버전 고정 (웹 서버와 동일한 scikit-learn·pandas·numpy) → 재빌드해도 재실행 결과 동일, 탐지 실험 재측정 결과 변화 없음 |
 | 오류 응답 | `DEBUG=False`, 오류 화면에는 추적 ID만 (`X-Request-ID`), CSV 오류 메시지에 정답 값 미포함 |
 | 로그 | 요청 ID 부여, password·token·session·join_code 값 자동 마스킹 (`apps/core/logging.py`) |
+| 프록시 뒤 접속자 IP | `TRUSTED_PROXY_COUNT` 개수만큼만 `X-Forwarded-For` 를 오른쪽부터 신뢰 (기본 0 = 무시). 프록시 IP 하나로 모든 방문자가 묶여 한 사람의 실패가 반 전체를 차단하는 문제 방지 (`TrustedProxyMiddleware`) |
 | 보안 헤더 | CSP(`script-src 'self'`, 인라인 스크립트 없음), `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, COOP |
 
 ### 2.5 권한 분리·중요 변경 기록
@@ -100,8 +103,9 @@ python manage.py sandbox_selftest   # 결과: 6/6 공격 차단
 | CSV 수식 주입 (성적 엑셀 내보내기) | `= + - @` 시작 값 앞에 `'` | `test_csv_export_escapes_formula` |
 | 정답이 섞인 파일 배포 | 정답 열을 제거한 배포본 자동 생성, 정답은 별도 저장소 | `test_admin2_full_setup_flow` |
 | 감사 로그 사후 조작 | 해시 체인 | `test_chain_valid_and_detects_tampering` |
+| 프록시 뒤에서 한 사람의 코드 오입력이 반 전체 가입 차단 | 신뢰 프록시 개수 기반 실제 IP 복원, 헤더 위조 무시 | `test_behind_proxy_*`, `test_forwarded_for_ignored_without_trusted_proxy` |
 
 ## 4. 알려진 제약
 
 - `sandbox-worker`는 Docker 소켓을 쓰므로 root로 실행된다. 대신 정답 볼륨·웹 포트가 없고, 참여자 코드는 별도 격리 컨테이너에서만 실행된다. 운영 환경에서는 rootless Docker 또는 gVisor(`runsc`) 런타임을 권장한다.
-- HTTPS 종단은 배포 환경의 리버스 프록시에서 처리한다 (`SECURE_COOKIES=true`, `SECURE_HSTS=true`).
+- HTTPS 종단은 배포 환경의 리버스 프록시에서 처리한다 (`SECURE_COOKIES=true`, `SECURE_HSTS=true`, `TRUSTED_PROXY_COUNT=1`) — [DEPLOY.md](DEPLOY.md)

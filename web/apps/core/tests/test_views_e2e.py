@@ -34,7 +34,7 @@ def test_admin2_full_setup_flow(client, admin2):
     url = reverse("competitions:project_settings", args=[project.pk])
 
     res = client.post(url, {"action": "testset", "testset": upload("full.csv", csv_bytes(make_testset()))})
-    assert "자동 추론 결과" in res.content.decode()
+    assert "자동 분석 결과" in res.content.decode()
     client.post(url, {"action": "schema", "id_column": "id", "target_column": "label", "task_type": "classification"})
     client.post(url, {"action": "deadline_add", "title": "1차", "due_at": "2099-01-01T18:00", "max_submissions": 3})
     client.post(url, {"action": "publish"})
@@ -108,7 +108,7 @@ def test_review_and_export_flow(client, project, participant, admin1, admin2):
     r.refresh_from_db()
     assert r.state == Review.State.APPROVED
     csv_text = client.get(reverse("competitions:results_export", args=[project.pk])).content.decode("utf-8-sig")
-    assert participant.name in csv_text and "검증 통과" in csv_text
+    assert participant.name in csv_text and "검토 통과" in csv_text
 
 
 def test_csv_export_escapes_formula(client, project, participant, admin2):
@@ -176,11 +176,11 @@ def test_dashboard_todos_for_admins(client, project, participant, admin1, admin2
     submit(participant, project, predictions_csv(project))
     client.force_login(admin1)
     html = client.get(reverse("core:dashboard")).content.decode()
-    assert 'data-testid="todos"' in html and "관리자1 검토 대기" in html
+    assert 'data-testid="todos"' in html and "조교 검토 대기" in html
     r = review.queue(project)[0]
     review.propose(r, admin1, "pass", "")
     client.force_login(admin2)
-    assert "관리자2 승인 대기" in client.get(reverse("core:dashboard")).content.decode()
+    assert "교수 승인 대기" in client.get(reverse("core:dashboard")).content.decode()
     client.force_login(participant)
     assert 'data-testid="todos"' not in client.get(reverse("core:dashboard")).content.decode()
 
@@ -194,3 +194,60 @@ def test_deadline_soon_banner(client, project, participant):
     client.force_login(participant)
     html = client.get(reverse("competitions:project_detail", args=[project.pk])).content.decode()
     assert 'data-testid="banner"' in html and "마감까지" in html
+
+
+def test_competition_home_before_first_graded_submission(client, project, participant):
+    """참여자가 아직 채점된 제출이 없을 때 대회 홈이 오류 없이 '-' 로 표시 (회귀: 500 오류)"""
+    client.force_login(participant)
+    res = client.get(reverse("competitions:detail", args=[project.competition.pk]))
+    assert res.status_code == 200
+    assert "내 최고 점수" in res.content.decode()
+
+
+def test_score_filter_handles_missing_values():
+    from apps.core.templatetags.ui import score
+
+    assert score(None) == "-" and score("") == "-" and score("abc") == "-"
+    assert score(0.98765, 3) == "0.988"
+
+
+def _api_submit(client, project, files: dict, comment=None):
+    """브라우저와 같은 경로(업로드 시작 → 업로드)로 제출하고 완료 응답을 돌려준다"""
+    res = client.post(reverse("submissions:start", args=[project.pk]),
+                      data=json.dumps({"hashes": {k: sha(v) for k, (_, v) in files.items()},
+                                       "sizes": {k: len(v) for k, (_, v) in files.items()}}),
+                      content_type="application/json")
+    start = res.json()
+    assert start["ok"], start
+    body = {k: upload(name, data) for k, (name, data) in files.items()}
+    if comment is not None:
+        body["comment"] = comment
+    return client.post(start["upload_url"], body).json()
+
+
+def test_R16_all_three_files_and_comment_are_stored_intact(client, project, participant, admin1):
+    """R-16: 예측 결과 CSV · 소스코드(ipynb) · 모델 파라미터 파일 · 코멘트가 모두 그대로 저장되고 검토자가 받아볼 수 있다"""
+    data, nb, w = predictions_csv(project), notebook_bytes(), weights_bytes()
+    client.force_login(participant)
+    done = _api_submit(client, project, {"csv": ("내 예측.csv", data), "notebook": ("풀이.ipynb", nb),
+                                         "weights": ("model.joblib", w)}, comment="학습률 0.01 로 변경")
+    assert done["ok"] and done["status"] == Submission.Status.GRADED
+    sub = Submission.objects.get(pk=done["status_url"].split("/")[-3])
+    assert sub.comment == "학습률 0.01 로 변경"
+    assert (sub.csv_name, sub.notebook_name, sub.weights_name) == ("내 예측.csv", "풀이.ipynb", "model.joblib")
+
+    # 조교가 내려받은 파일이 올린 파일과 바이트 단위로 같아야 한다
+    client.force_login(admin1)
+    for kind, original in (("csv", data), ("notebook", nb), ("weights", w)):
+        res = client.get(reverse("submissions:download", args=[sub.pk, kind]))
+        assert res.status_code == 200 and b"".join(res.streaming_content) == original, kind
+    # 코멘트가 제출 상세 화면에 보인다
+    assert "학습률 0.01 로 변경" in client.get(reverse("submissions:detail", args=[sub.pk])).content.decode()
+
+
+def test_R16_comment_is_optional(client, project, participant):
+    """코멘트 없이도 제출·채점된다 (RFP: 코멘트 선택)"""
+    client.force_login(participant)
+    done = _api_submit(client, project, {"csv": ("p.csv", predictions_csv(project)), "notebook": ("n.ipynb", notebook_bytes()),
+                                         "weights": ("m.joblib", weights_bytes())})
+    assert done["ok"] and done["status"] == Submission.Status.GRADED

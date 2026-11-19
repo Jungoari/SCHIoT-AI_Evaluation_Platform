@@ -41,10 +41,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField("이메일", unique=True)
     name = models.CharField("이름", max_length=50)
     student_no = models.CharField("학번", max_length=20, blank=True)
-    is_admin2 = models.BooleanField("관리자2(총괄)", default=False)
+    is_admin2 = models.BooleanField("교수(총괄)", default=False)
     is_active = models.BooleanField("활성", default=True)
     is_staff = models.BooleanField("Django 관리 화면 접근", default=False)
     date_joined = models.DateTimeField("가입일", default=timezone.now)
+    # 처음 로그인했을 때 역할별 사용 안내(튜토리얼)를 한 번 보여주기 위한 기록. 비어 있으면 아직 안 봄
+    tutorial_done_at = models.DateTimeField("사용 안내 완료 시각", null=True, blank=True)
 
     objects = UserManager()
 

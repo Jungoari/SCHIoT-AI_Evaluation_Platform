@@ -22,7 +22,7 @@ REASON_TEMPLATES = [
     "학습·추론 코드와 측정치 로그가 확인되어 적합",
     "노트북에 CSV 생성 과정이 없음",
     "다른 참여자 제출과 예측값이 사실상 동일",
-    "가중치로 재실행한 결과가 제출 CSV와 다름",
+    "제출한 모델로 다시 실행한 결과가 제출 CSV와 다름",
     "예측값을 코드에 직접 기입한 흔적",
 ]
 
@@ -81,7 +81,7 @@ def review_propose(request, pk):
     review = _review(request, pk)
     try:
         services.propose(review, request.user, request.POST.get("verdict", ""), request.POST.get("note", ""), request)
-        messages.success(request, "판정을 제안했습니다. 관리자2의 승인을 기다립니다")
+        messages.success(request, "검토 의견을 냈습니다. 교수의 승인을 기다립니다")
     except services.ReviewError as exc:
         messages.error(request, str(exc))
         return redirect("review:detail", pk=review.pk)
@@ -102,9 +102,9 @@ def review_decide(request, pk):
         return redirect("review:detail", pk=review.pk)
     review.refresh_from_db()
     if review.state == Review.State.REJECTED:
-        messages.success(request, "부적합으로 확정했습니다. 이 참여자의 다음 기록이 검토 큐에 추가되었습니다")
+        messages.success(request, "부적합으로 확정했습니다. 이 참여자의 다음 기록이 검토 목록에 추가되었습니다")
     else:
-        messages.success(request, "검증 통과 — 대표 기록과 성적이 확정되었습니다")
+        messages.success(request, "검토 통과 — 대표 기록과 성적이 확정되었습니다")
     return redirect("review:queue", pk=review.submission.project_id)
 
 
@@ -147,7 +147,7 @@ def rerun(request, pk):
     from apps.integrity.sandbox import request_rerun
 
     request_rerun(review.submission, request.user, request)
-    messages.success(request, "격리 환경에서 재실행을 시작했습니다. 잠시 후 새로고침하세요")
+    messages.success(request, "안전한 환경에서 다시 실행을 시작했습니다. 잠시 후 새로고침하세요")
     return redirect("review:detail", pk=review.pk)
 
 

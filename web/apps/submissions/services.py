@@ -55,7 +55,7 @@ def expire_stale_uploads(project: Project, user=None, now=None) -> int:
         qs = qs.filter(user=user)
     count = 0
     for sub in qs:
-        _fail_upload(sub, "업로드가 유예 시간 안에 완료되지 않았습니다")
+        _fail_upload(sub, "허용 시간 안에 업로드가 끝나지 않았습니다")
         count += 1
     return count
 
@@ -93,7 +93,7 @@ def start_submission(user, project: Project, declared: dict, sizes: dict | None 
     declared = {k: str(declared.get(k, "")).lower() for k in FILE_KINDS}
     for value in declared.values():
         if not HEX64.match(value):
-            raise SubmissionError("필수 파일 3종(CSV·노트북·가중치)의 지문 정보가 올바르지 않습니다")
+            raise SubmissionError("필수 파일 3종(CSV·노트북·가중치)의 확인 정보가 올바르지 않습니다")
     if not project.is_published or not project.is_ready:
         raise SubmissionError("아직 제출을 받지 않는 프로젝트입니다", 403)
 

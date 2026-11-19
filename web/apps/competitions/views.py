@@ -129,7 +129,7 @@ def member_action(request, pk, mid):
         return redirect("competitions:members", pk=comp.pk)
     # 관리자1은 다른 관리자1을 변경할 수 없다 (권한 상승·방해 방지)
     if m.role == Role.ADMIN1 and not permissions.is_admin2(request.user):
-        messages.error(request, "관리자1 계정은 관리자2만 변경할 수 있습니다")
+        messages.error(request, "조교 계정은 교수만 변경할 수 있습니다")
         return redirect("competitions:members", pk=comp.pk)
 
     if action == "toggle":
@@ -181,7 +181,7 @@ def project_create(request, pk):
         project.competition = comp
         project.save()
         record("project.created", request=request, competition=comp, target=project, summary=f"프로젝트 생성: {project.title}")
-        messages.success(request, "프로젝트를 만들었습니다. 이제 테스트셋과 마감일을 설정하세요")
+        messages.success(request, "프로젝트를 만들었습니다. 이제 정답 파일과 마감일을 설정하세요")
         return redirect("competitions:project_settings", pk=project.pk)
     return render(request, "competitions/project_form.html", comp_context(request, comp, form=form))
 
@@ -259,7 +259,9 @@ def project_settings(request, pk):
 
     form = ProjectForm(instance=project)
     testset_form = TestsetForm()
-    deadline_form = DeadlineForm(initial={"title": f"{project.deadlines.count() + 1}차 마감", "max_submissions": 5})
+    # auto_id: 프로젝트 폼과 같은 필드 이름(title)이라 id 가 겹치지 않게 (라벨 연결·접근성)
+    deadline_form = DeadlineForm(initial={"title": f"{project.deadlines.count() + 1}차 마감", "max_submissions": 5},
+                                 auto_id="dl_%s")
     file_form = ProjectFileForm()
     schema_form = None
     inferred = None
@@ -279,7 +281,7 @@ def project_settings(request, pk):
             if testset_form.is_valid():
                 inferred = services.upload_testset(project, testset_form.cleaned_data["testset"], request.user, request)
                 project.refresh_from_db()
-                messages.success(request, "테스트셋을 올렸습니다. 자동 추론된 규격을 확인하고 확정해 주세요")
+                messages.success(request, "정답 파일을 올렸습니다. 자동으로 찾은 형식을 확인하고 확정해 주세요")
         elif action == "schema":
             df = services.current_testset(project)
             schema_form = SchemaForm(request.POST, columns=list(df.columns) if df is not None else [])
@@ -287,10 +289,10 @@ def project_settings(request, pk):
                 services.confirm_schema(project, schema_form.cleaned_data["id_column"],
                                         schema_form.cleaned_data["target_column"], schema_form.cleaned_data["task_type"],
                                         request.user, request)
-                messages.success(request, "규격을 확정하고 참여자 배포 파일(테스트 특성·샘플 제출·템플릿)을 만들었습니다")
+                messages.success(request, "형식을 확정하고 학생용 자료(평가용 입력 데이터·제출 예시·예시 노트북)를 만들었습니다")
                 return redirect("competitions:project_settings", pk=project.pk)
         elif action == "deadline_add":
-            deadline_form = DeadlineForm(request.POST)
+            deadline_form = DeadlineForm(request.POST, auto_id="dl_%s")
             if deadline_form.is_valid():
                 d = deadline_form.save(commit=False)
                 d.project = project
@@ -326,22 +328,22 @@ def project_settings(request, pk):
             if file_form.is_valid():
                 services.add_project_file(project, file_form.cleaned_data["kind"], file_form.cleaned_data["file"],
                                           request.user, request)
-                messages.success(request, "배포 파일을 추가했습니다")
+                messages.success(request, "학생용 자료를 추가했습니다")
                 return redirect("competitions:project_settings", pk=project.pk)
         elif action == "file_delete":
             pf = get_object_or_404(project.files, pk=request.POST.get("file"))
             if pf.kind in (ProjectFile.Kind.TEST_FEATURES, ProjectFile.Kind.SAMPLE_SUBMISSION):
-                messages.error(request, "자동 생성 파일은 규격을 다시 확정하면 갱신됩니다")
+                messages.error(request, "자동 생성 파일은 형식을 다시 확정하면 갱신됩니다")
             else:
                 storage.delete(storage.upload_root(), pf.stored_name)
                 record("project.file_deleted", request=request, competition=comp, target=project,
-                       summary=f"배포 파일 삭제: {pf.original_name}")
+                       summary=f"학생용 자료 삭제: {pf.original_name}")
                 pf.delete()
                 messages.success(request, "파일을 삭제했습니다")
             return redirect("competitions:project_settings", pk=project.pk)
         elif action == "publish":
             if not project.is_ready and not project.is_published:
-                messages.error(request, "테스트셋 규격 확정과 마감일 설정을 먼저 완료해 주세요")
+                messages.error(request, "정답 파일 형식 확정과 마감일 설정을 먼저 완료해 주세요")
             else:
                 project.is_published = not project.is_published
                 project.save(update_fields=["is_published"])
@@ -411,10 +413,10 @@ def results_export(request, pk):
     response["Content-Disposition"] = f'attachment; filename="results_project{project.pk}.csv"'
     response.write("﻿")  # 엑셀 한글 깨짐 방지
     writer = csv.writer(response)
-    writer.writerow(["순위", "이름", "학번", "이메일", "점수", "검증 상태", "대표 제출 ID", "제출 시각"])
+    writer.writerow(["순위", "이름", "학번", "이메일", "점수", "검토 상태", "대표 제출 ID", "제출 시각"])
     for r in rows:
         sub = r["submission"]
-        state = r["review"].get_state_display() if r["review"] else "검증 대기"
+        state = r["review"].get_state_display() if r["review"] else "검토 전"
         writer.writerow([_csv_safe(v) for v in (
             r["rank"] or "-", sub.user.name, sub.user.student_no, sub.user.email,
             f"{sub.score:.{project.decimals}f}", state, sub.pk, timezone.localtime(sub.started_at).strftime("%Y-%m-%d %H:%M:%S"),

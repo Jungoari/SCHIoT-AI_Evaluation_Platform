@@ -75,7 +75,7 @@ def upload_testset(project: Project, uploaded, actor, request=None):
         project.target_column = ""
         project.save()
         record("project.testset_uploaded", actor=actor, request=request, competition=project.competition,
-               target=project, summary=f"{project.title} 테스트셋 업로드 ({schema.row_count}행)",
+               target=project, summary=f"{project.title} 정답 파일 업로드 ({schema.row_count}행)",
                data={"sha256": stored.sha256, "rows": schema.row_count, "replaced": bool(old)})
     if old:
         storage.delete(storage.label_root(), old)
@@ -92,7 +92,7 @@ def confirm_schema(project: Project, id_col: str, target_col: str, task_type: st
     """규격 확정 → 배포 파일 생성. 이미 제출이 있으면 전체 재채점"""
     df = current_testset(project)
     if df is None:
-        raise SetupError("먼저 테스트셋을 올려 주세요")
+        raise SetupError("먼저 정답 파일을 올려 주세요")
     try:
         schema = schema_for(df, id_col, target_col, task_type)
     except CsvReadError as exc:
@@ -128,7 +128,7 @@ def confirm_schema(project: Project, id_col: str, target_col: str, task_type: st
                                template_notebook(project).encode())
 
         record("project.schema_confirmed", actor=actor, request=request, competition=project.competition,
-               target=project, summary=f"{project.title} 규격 확정 및 배포 파일 생성",
+               target=project, summary=f"{project.title} 형식 확정 및 학생용 자료 생성",
                data={"id": schema.id_column, "target": schema.target_column, "task": schema.task_type,
                      "labels": schema.allowed_labels[:50], "rows": schema.row_count})
 
@@ -160,7 +160,7 @@ def add_project_file(project: Project, kind: str, uploaded, actor, request=None)
     if kind == ProjectFile.Kind.TRAIN and ext != ".csv":
         raise SetupError("학습 데이터는 CSV 파일이어야 합니다")
     if kind == ProjectFile.Kind.TEMPLATE_NOTEBOOK and ext != ".ipynb":
-        raise SetupError("템플릿 노트북은 .ipynb 파일이어야 합니다")
+        raise SetupError("예시 노트북은 .ipynb 파일이어야 합니다")
     if ext not in ALLOWED_EXTRA:
         raise SetupError("허용되지 않는 파일 형식입니다")
     stored = storage.save_upload(uploaded, storage.upload_root(), ext, max_bytes=500 * 1024 * 1024)
@@ -183,7 +183,7 @@ def add_project_file(project: Project, kind: str, uploaded, actor, request=None)
         pf = ProjectFile.objects.create(project=project, kind=kind, original_name=uploaded.name[:200],
                                         stored_name=stored.name, size=stored.size, sha256=stored.sha256)
         record("project.file_added", actor=actor, request=request, competition=project.competition,
-               target=project, summary=f"{project.title} 배포 파일 추가: {pf.get_kind_display()}")
+               target=project, summary=f"{project.title} 학생용 자료 추가: {pf.get_kind_display()}")
     return pf
 
 
@@ -206,7 +206,7 @@ def template_notebook(project: Project) -> str:
             f"# {project.title} — 제출 템플릿\n\n"
             "1. 학습 셀에서 모델을 학습하고 **가중치 파일**을 저장합니다\n"
             "2. `inference` 태그가 붙은 마지막 셀은 **가중치 파일만으로** 예측 CSV를 만들어야 합니다\n"
-            "   (관리자 검증 시 이 셀만 격리 환경에서 다시 실행해 제출 CSV와 비교합니다)\n"
+            "   (검토 때 이 셀만 안전한 환경에서 다시 실행해 제출 CSV와 비교합니다)\n"
             "3. 제출물: 예측 CSV + 이 노트북(.ipynb) + 가중치 파일"
         ),
         nbformat.v4.new_code_cell(

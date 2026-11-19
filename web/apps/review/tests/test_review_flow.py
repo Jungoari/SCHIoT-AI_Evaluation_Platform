@@ -56,7 +56,7 @@ def test_E01_E05_participant_sees_aliases_only(client, project, participant, par
 def test_E04_unverified_included_with_state(project, participant):
     submit(participant, project, predictions_csv(project))
     rows = standings(project)
-    assert rows[0].state_label == "검증 대기"
+    assert rows[0].state_label == "검토 전"
 
 
 def test_F01_same_score_latest_first(project, participant):

@@ -4,7 +4,7 @@ from apps.competitions.models import Project
 
 from . import permissions
 
-ROLE_LABELS = {"admin2": "관리자2", "admin1": "관리자1", "participant": "참여자"}
+ROLE_LABELS = {"admin2": "교수", "admin1": "조교", "participant": "참여자"}
 
 
 def visible_projects(user, competition):
