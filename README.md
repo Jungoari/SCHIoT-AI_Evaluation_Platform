@@ -293,7 +293,7 @@ VM 1대 + Docker + Caddy(HTTPS 자동) 구성, 약 30분 — 단계별 명령·`
 ├── scripts/
 │   ├── record_gifs/            # Playwright 시나리오 → GIF 자동 녹화 (record.py, overlay.js)
 │   ├── build_presentation.py   # 발표 자료 생성 · pptx_preview.py 슬라이드 미리보기
-│   ├── presentation_notes.py   # 발표 대본(15분) → 발표자 노트 + docs/PRESENTATION_SCRIPT.md
+│   ├── presentation_notes.py   # 발표 대본(15분) → 발표자 노트
 │   ├── loadtest.py             # 50명 동시 제출 부하 테스트
 │   └── usability_report.py     # SUS·과제·업무 시간 기록 → README 표
 └── web/                        # Django 프로젝트

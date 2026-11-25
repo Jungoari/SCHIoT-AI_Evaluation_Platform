@@ -27,3 +27,13 @@ scripts/record_gifs/output/
 .idea/
 .vscode/
 presentation/frames/
+
+# 대회 준비용 내부 문서 — 정원 PC 에만 보관 (GitHub 에 올리지 않음)
+docs/EVALUATION.md
+docs/QUESTIONS.md
+docs/SUBMISSION_CHECKLIST.md
+docs/PRESENTATION_GUIDE.md
+docs/PRESENTATION_SCRIPT.md
+# 개발 도구 설정 · PowerPoint 가 파일을 열 때 만드는 임시 잠금 파일
+.claude/
+~$*
