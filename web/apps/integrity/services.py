@@ -8,6 +8,7 @@
   I-4 실행 기록          : 노트북에 실제 실행 흔적이 있는가, 실행 순서가 정상인가
   I-5 가중치 파일        : 형식·크기 (pickle 은 샌드박스에서만 로드)
   I-7 결과만 바뀐 제출    : 코드·가중치는 이전 제출과 같은데 CSV 결과만 달라졌는가 (CSV 수기 수정 의심)
+  I-8 교차 검증 출력      : (프로젝트에서 켠 경우) 실행 결과에 k개 폴드 점수와 평균이 출력돼 있는가, 보고한 평균이 실제 점수와 크게 다른가
 느린 검사(검토 대상만, 버튼으로 실행)
   I-6 추론 재실행        : sandbox.py
 
@@ -17,6 +18,7 @@
 import ast
 import json
 import logging
+import re
 
 import pandas as pd
 
@@ -257,11 +259,17 @@ def analyze_notebook(nb: dict) -> dict:
     }
 
 
-def check_notebook(sub: Submission) -> list[dict]:
+def load_notebook(sub: Submission) -> dict | None:
     try:
         with open(storage.safe_path(storage.upload_root(), sub.notebook_file), encoding="utf-8") as fh:
-            nb = json.load(fh)
+            return json.load(fh)
     except Exception:
+        return None
+
+
+def check_notebook(sub: Submission, nb: dict | None = None) -> list[dict]:
+    nb = nb if nb is not None else load_notebook(sub)
+    if nb is None:
         return [_check("I-3", "노트북 코드 분석", "yellow", "노트북을 분석할 수 없습니다")]
     a = analyze_notebook(nb)
     checks = []
@@ -285,6 +293,97 @@ def check_notebook(sub: Submission) -> list[dict]:
         level, detail = "green", f"코드 셀 {a['code_cells']}개 중 {a['executed']}개 실행, {a['with_output']}개 출력 기록 있음"
     checks.append(_check("I-4", "실행 기록", level, detail))
     return checks
+
+
+# ---------------------------------------------------------------------------
+# I-8 교차 검증 출력 (수업 규칙: "k-폴드 결과와 평균이 출력된 노트북만 인정")
+# ---------------------------------------------------------------------------
+NUM = r"-?\d+(?:\.\d*)?(?:e-?\d+)?"  # numpy 는 1.0 을 "1." 로 출력
+FOLD_LINE = re.compile(r"(fold|폴드)\s*[#:\-]?\s*\d+[^\n]*?" + NUM, re.IGNORECASE)
+NUM_LIST = re.compile(r"\[\s*(" + NUM + r"(?:[\s,]+" + NUM + r")+)\s*\]")
+# 평균 줄: 'mean'·'average'·'avg'·'평균' (변수명 mean_rmse 처럼 밑줄로 붙은 경우는 제외)
+MEAN_WORD = re.compile(r"(?<![A-Za-z_])(?:mean|average|avg)(?![A-Za-z_])|평균", re.IGNORECASE)
+NUM_RE = re.compile(NUM)
+FOLD_AFTER = re.compile(r"\s*-?\s*(?:fold|폴드|겹)", re.IGNORECASE)  # '10-fold' 의 10 은 점수가 아님
+# 점수 목록으로 인정하려면 같은 줄 앞부분에 이런 단어가 있어야 한다 (오차 행렬 행 같은 숫자 목록 제외)
+LIST_LABEL = re.compile(r"fold|폴드|cv|교차|score|점수|결과|정확도|accuracy|acc|rmse|mae|loss|f1|r2", re.IGNORECASE)
+# 분류 리포트의 'macro avg ... 7352' 같은 줄은 평균 보고가 아님 (마지막 숫자가 표본 수)
+REPORT_AVG = re.compile(r"(macro|weighted|micro|samples)\s+avg", re.IGNORECASE)
+TAIL_CHARS = 2_000_000  # 학습 로그가 수십 MB 일 수 있어 결과가 출력되는 끝부분만 본다
+# 보고한 평균과 공식 점수(숨겨 둔 정답 기준)의 차이가 이보다 크면 확인 권장
+GAP_CLASSIFICATION = 0.10  # 정확도 등 0~1 지표: 절대 차이
+GAP_REGRESSION = 0.5  # 오차 지표: 상대 차이 50%
+
+
+def notebook_output_text(nb: dict) -> str:
+    """코드 셀의 실행 출력(표준 출력·결과값)만 모은다 — 코드는 실행하지 않음"""
+    parts = []
+    for cell in nb.get("cells", []):
+        if cell.get("cell_type") != "code":
+            continue
+        for out in cell.get("outputs", []):
+            text = out.get("text") or out.get("data", {}).get("text/plain") or ""
+            parts.append("".join(text) if isinstance(text, list) else str(text))
+    return "\n".join(parts)
+
+
+def _reported_mean(line: str) -> float | None:
+    m = MEAN_WORD.search(line)
+    if not m or REPORT_AVG.search(line):
+        return None
+    values = [float(n.group()) for n in NUM_RE.finditer(line, m.end())
+              if not FOLD_AFTER.match(line, n.end()) and not line[n.end():n.end() + 1].isalpha()]
+    return values[-1] if values else None  # 줄 끝의 값이 보고한 평균인 경우가 대부분
+
+
+def find_cv_report(text: str, k: int) -> dict:
+    text = text[-TAIL_CHARS:]
+    fold_lines = FOLD_LINE.findall(text)
+    lists = []
+    for m in NUM_LIST.finditer(text):
+        line_start = text.rfind("\n", 0, m.start()) + 1
+        if LIST_LABEL.search(text, line_start, m.start()):
+            lists.append(len(NUM_RE.findall(m.group(1))))
+    means = [v for v in (_reported_mean(line) for line in text.splitlines()) if v is not None]
+    return {
+        "fold_lines": len(fold_lines),
+        "longest_list": max(lists, default=0),
+        "has_k_folds": len(fold_lines) >= k or any(n >= k for n in lists),
+        "reported_mean": means[-1] if means else None,  # 마지막에 출력한 평균을 최종 보고값으로 본다
+    }
+
+
+def check_cv_output(sub: Submission, nb: dict | None) -> dict | None:
+    k = sub.project.cv_folds
+    if not k:
+        return None
+    if nb is None:
+        return _check("I-8", "교차 검증 출력", "yellow", "노트북을 읽을 수 없어 교차 검증 출력을 확인하지 못했습니다")
+    r = find_cv_report(notebook_output_text(nb), k)
+    missing = []
+    if not r["has_k_folds"]:
+        missing.append(f"{k}개 폴드 점수")
+    if r["reported_mean"] is None:
+        missing.append("평균")
+    if missing:
+        return _check("I-8", "교차 검증 출력", "yellow",
+                      f"실행 결과에서 {' · '.join(missing)}을(를) 찾지 못했습니다 (수업 규칙상 결과 처리 제외 대상일 수 있음)", r)
+    detail = f"{k}-폴드 결과와 평균이 출력돼 있습니다 (보고한 평균 {r['reported_mean']:g})"
+    level = "green"
+    if sub.score is not None:
+        official, reported = float(sub.score), r["reported_mean"]
+        if sub.project.task_type == "classification" and 0 <= reported <= 1:
+            gap = abs(reported - official)
+            big = gap > GAP_CLASSIFICATION
+        else:
+            gap = abs(reported - official) / max(abs(official), 1e-9)
+            big = gap > GAP_REGRESSION
+        r["official_score"] = official
+        if big:
+            level = "yellow"
+            detail = (f"보고한 {k}-폴드 평균 {reported:g} 과 숨겨 둔 정답 기준 점수 {official:g} 의 차이가 큽니다 "
+                      "(과적합·데이터 누수·출력 조작 가능성 — 노트북 확인 권장)")
+    return _check("I-8", "교차 검증 출력", level, detail, r)
 
 
 # ---------------------------------------------------------------------------
@@ -336,9 +435,13 @@ def run_quick_checks(sub: Submission, labels: pd.Series | None = None, predictio
     checks = []
     if predictions is not None and sub.prediction_hash:
         checks += check_duplicates_and_copy(sub, labels, predictions)
-    checks += check_notebook(sub)
+    nb = load_notebook(sub)
+    checks += check_notebook(sub, nb)
     checks.append(check_weights(sub))
     checks.append(check_result_only_changed(sub))
+    cv = check_cv_output(sub, nb)
+    if cv is not None:
+        checks.append(cv)
 
     report, _ = IntegrityReport.objects.get_or_create(submission=sub)
     # 재실행(I-6) 결과는 유지

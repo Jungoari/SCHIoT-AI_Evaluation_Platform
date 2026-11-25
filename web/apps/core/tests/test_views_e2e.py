@@ -251,3 +251,13 @@ def test_R16_comment_is_optional(client, project, participant):
     done = _api_submit(client, project, {"csv": ("p.csv", predictions_csv(project)), "notebook": ("n.ipynb", notebook_bytes()),
                                          "weights": ("m.joblib", weights_bytes())})
     assert done["ok"] and done["status"] == Submission.Status.GRADED
+
+
+def test_project_cv_folds_optional_and_saved(client, admin2, competition):
+    """'교차 검증 출력 필수' 칸은 비워도 문제 생성이 되고(0 = 검사 안 함), 값을 주면 저장된다"""
+    client.force_login(admin2)
+    base = {"description": "", "metric": "accuracy", "direction": "auto", "decimals": 4, "grace_minutes": 30}
+    client.post(reverse("competitions:project_create", args=[competition.pk]), {**base, "title": "비움"})
+    client.post(reverse("competitions:project_create", args=[competition.pk]), {**base, "title": "5-폴드", "cv_folds": 5})
+    assert Project.objects.get(title="비움").cv_folds == 0
+    assert Project.objects.get(title="5-폴드").cv_folds == 5

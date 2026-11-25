@@ -18,6 +18,8 @@ import pandas as pd
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import MinMaxScaler
 
 from apps.competitions import services as comp_services
 from apps.competitions.models import Competition, Role
@@ -45,15 +47,19 @@ class Command(BaseCommand):
         out = Path(options["out"])
         out.mkdir(parents=True, exist_ok=True)
 
-        # 1) 정상 제출물: 테스터가 만든 것처럼 간단한 로지스틱 회귀 모델
-        train, test = demo.digits_frames()
+        # 1) 정상 제출물: 테스터가 만든 것처럼 간단한 로지스틱 회귀 모델 (패션 MNIST, 수업 규칙대로 5-폴드 결과 출력)
+        train, test = demo.fashion_frames()
         X, y = train.drop(columns=["id", "label"]), train["label"]
-        model = LogisticRegression(C=0.1, max_iter=3000).fit(X, y)
+        model = make_pipeline(MinMaxScaler(), LogisticRegression(C=0.1, max_iter=300))
+        scores = demo.cv_scores(model, X, y, "accuracy")
+        model.fit(X, y)
         pred = model.predict(test.drop(columns=["id", "label"]))
-        code = "from sklearn.linear_model import LogisticRegression\nmodel = LogisticRegression(C=0.1, max_iter=3000)"
+        code = ("from sklearn.pipeline import make_pipeline\nfrom sklearn.preprocessing import MinMaxScaler\n"
+                "from sklearn.linear_model import LogisticRegression\n"
+                "model = make_pipeline(MinMaxScaler(), LogisticRegression(C=0.1, max_iter=300))")
         acc = float((pred == test["label"].values).mean())
 
-        (out / "solution.ipynb").write_bytes(demo.make_notebook(code, "label", [f"validation accuracy {acc:.4f}"]))
+        (out / "solution.ipynb").write_bytes(demo.make_notebook(code, "label", demo.cv_log(scores, "accuracy")))
         (out / "model.joblib").write_bytes(demo.dump_weights(model))
         (out / "submission.csv").write_bytes(demo.csv_of(test["id"], "label", pred))
 

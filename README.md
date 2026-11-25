@@ -8,7 +8,7 @@
 
 수업용 폐쇄형 Kaggle — CSV 자동 채점 · 실시간 리더보드 · 관리자 2단계 검증 · 부정 제출 자동 탐지 · 격리 재실행
 
-![tests](https://img.shields.io/badge/tests-131%20passed-22d39a) ![python](https://img.shields.io/badge/python-3.13-2f63ea) ![django](https://img.shields.io/badge/django-5.2-2f63ea) ![docker](https://img.shields.io/badge/docker%20compose-1%20command-2f63ea) ![security](https://img.shields.io/badge/sandbox%20attacks-6%2F6%20blocked-22d39a)
+![tests](https://img.shields.io/badge/tests-140%20passed-22d39a) ![python](https://img.shields.io/badge/python-3.13-2f63ea) ![django](https://img.shields.io/badge/django-5.2-2f63ea) ![docker](https://img.shields.io/badge/docker%20compose-1%20command-2f63ea) ![security](https://img.shields.io/badge/sandbox%20attacks-6%2F6%20blocked-22d39a)
 
 <img src="docs/assets/gifs/G03_submit.gif" alt="제출 → 즉시 채점 → 순위" width="860">
 
@@ -34,7 +34,7 @@ cp .env.example .env   # 필요하면 POSTGRES_PASSWORD, DJANGO_SECRET_KEY 수�
 docker compose up --build
 ```
 
-→ http://localhost:8000 접속. 첫 실행 시 **실제 sklearn 모델로 학습한 데모 제출**이 자동 생성됩니다 (약 1분).
+→ http://localhost:8000 접속. 첫 실행 시 **딥러닝 수업 미니프로젝트 1~4 를 그대로 옮긴 데모 대회**가 실제 모델 학습으로 자동 생성됩니다 (약 2분).
 8000번 포트를 이미 쓰고 있다면 `WEB_PORT=8080 docker compose up --build` 처럼 바꿀 수 있습니다.
 
 ```bash
@@ -47,6 +47,17 @@ docker compose exec web python manage.py integrity_experiment          # 부정 
 | 관리자2 (교수) | `prof@demo.evalhub` | `evalhub-demo-2026` | 대회 개설, 프로젝트 설정, 최종 승인, 감사 로그 위변조 검증 |
 | 관리자1 (조교) | `ta@demo.evalhub` | `evalhub-demo-2026` | 검토 목록 → 부정 의심 점검 → 의견 제출, 회원 관리 |
 | 참여자 (학생) | `student1@demo.evalhub` ~ `student14@demo.evalhub` | `evalhub-demo-2026` | 제출, 내 점수 추이, 익명 리더보드 |
+
+**데모 대회 = 실제 수업 과제** — 순천향대 딥러닝 수업 미니프로젝트 1~4 를 같은 공개 데이터로 옮겼습니다 (출처·라이선스: [web/apps/core/demo_data/README.md](web/apps/core/demo_data/README.md))
+
+| 프로젝트 | 데이터 | 지표 | 데모에서 볼 것 |
+|---|---|---|---|
+| 1. 패션 MNIST 분류 | 28×28 이미지 · 10클래스 | 정확도 | 학생 14명 경쟁 · 부정 제출 4종 적발 · 2단계 검토 |
+| 2. 스마트폰 행동 인식 (HAR) | 센서 특성 561개 · 6가지 행동 | 정확도 | 교차 검증 출력을 빼먹은 제출 (I-8 🟡) |
+| 3. 킹 카운티 집값 예측 | 주택 특성 18개 | RMSE | 훈련 데이터로 '검증'해 평균을 부풀린 제출 (I-8 🟡) |
+| 4. 레드 와인 품질 예측 | 화학 특성 11개 | RMSE | 정상 제출 5건 |
+
+모든 데모 노트북에는 **실제로 계산한 5-폴드 교차 검증 결과와 평균**이 출력돼 있고 (수업 규칙), 공식 점수는 학생이 볼 수 없는 평가용 정답으로 매깁니다.
 
 > 데모 비밀번호는 시연 전용으로 공개된 값입니다. 운영 시 `.env`에서 `DEMO_MODE=false`로 바꾸면 데모 데이터 생성이 차단됩니다.
 
@@ -82,7 +93,7 @@ RFP에서 추출한 요구사항 **46개 전부 구현**했고, 각 항목은 �
 | p.7 | 참여자 코드 실행 시 정답·비밀키·타인 자료·관리 기능 차단 | **정답 프로세스와 실행 프로세스 물리 분리**, 네트워크 차단 샌드박스 | `sandbox_selftest` 6/6 |
 | p.7 | 파일 내용 검증·안전한 저장명, 노트북 비신뢰 HTML 처리 | UUID 저장, nh3 정제 + `sandbox` iframe + CSP 3중 방어 | `test_S05`, `test_S07` |
 | p.7 | 비밀정보 관리·내부 정보 비노출, 권한 분리·변경 기록 | Argon2, 로그인 잠금, 추적 ID 오류 화면, **해시 체인 감사 로그** | `test_chain.py` |
-| p.8 | ★ CSV가 모델 추론 결과인지 우회인지 판단 | **무결성 리포트** I-1~I-7 | `test_integrity.py` |
+| p.8 | ★ CSV가 모델 추론 결과인지 우회인지 판단 | **무결성 리포트** I-1~I-8 | `test_integrity.py` |
 
 ---
 
@@ -98,7 +109,7 @@ RFP에서 추출한 요구사항 **46개 전부 구현**했고, 각 항목은 �
 | **G09 관리자1 검토 · 무결성 리포트 · 판정 제안**<br><img src="docs/assets/gifs/G09_admin1_review.gif" width="420"> | **G10 관리자2 부적합 확정 → 다음 기록 · 일괄 승인**<br><img src="docs/assets/gifs/G10_admin2_approve.gif" width="420"> |
 | **G11 부정 제출 적발 + 격리 재실행(I-6)**<br><img src="docs/assets/gifs/G11_cheating_detection.gif" width="420"> | **G12 샌드박스 공격 6종 실측 차단**<br><img src="docs/assets/gifs/G12_sandbox_attacks.gif" width="420"> |
 | **G13 노트북 XSS 무력화** (관리자 세션 보호)<br><img src="docs/assets/gifs/G13_notebook_xss.gif" width="420"> | **G15 권한 우회 차단** (설정·타인 제출물 → 404)<br><img src="docs/assets/gifs/G15_permission_bypass.gif" width="420"> |
-| **G16 감사 로그 위변조 감지**<br><img src="docs/assets/gifs/G16_audit_tamper.gif" width="420"> | **G17 전체 자동화 테스트 131개 통과**<br><img src="docs/assets/gifs/G17_all_tests.gif" width="420"> |
+| **G16 감사 로그 위변조 감지**<br><img src="docs/assets/gifs/G16_audit_tamper.gif" width="420"> | **G17 전체 자동화 테스트 140개 통과**<br><img src="docs/assets/gifs/G17_all_tests.gif" width="420"> |
 | **G18 부정 탐지 실험** (정직 20 · 부정 30)<br><img src="docs/assets/gifs/G18_integrity_experiment.gif" width="420"> | |
 
 ---
@@ -173,15 +184,20 @@ RFP에서 추출한 요구사항 **46개 전부 구현**했고, 각 항목은 �
 | I-5 | 가중치 파일 | 빈/가짜 가중치 | 형식·크기 (pickle은 샌드박스에서만 로드) |
 | I-6 | **추론 재실행** | CSV가 이 모델에서 나왔는가 | 격리 컨테이너에서 `inference` 셀만 재실행 → 제출 CSV와 일치율 |
 | I-7 | 결과만 바뀐 제출 | 코드·가중치 그대로, CSV만 수정 | 직전 제출과 노트북·가중치 지문 비교 |
+| I-8 | **교차 검증 출력** (수업 규칙) | 'k-폴드 결과와 평균 출력 필수' 위반, 부풀린 보고값 | 실행 출력에서 폴드 점수 k개·평균을 찾고, 보고한 평균과 **숨겨 둔 정답 기준 점수**를 비교 (프로젝트별로 켜고 끔) |
 
-데모 데이터의 실제 결과 — 정직한 제출 20건은 전부 🟢, 부정 사례 4건은 각각 정확한 코드로 🔴:
+데모 데이터의 실제 결과 — 정직한 제출 31건(4개 프로젝트)은 전부 🟢, 부정 사례 4건은 각각 정확한 코드로 🔴, 수업 규칙 위반·실수 2건은 🟡:
 
 | 참여자 | 행동 | 결과 |
 |---|---|---|
-| 오지우 | 박민준의 CSV 그대로 | 🔴 I-1 완전 중복 · I-6 재실행 일치율 92% |
-| 한예준 | 최서연의 CSV를 12문항 바꿔 제출 | 🔴 I-2 부분 복사 패턴 |
-| 임수아 | 예측값을 코드에 직접 기입 | 🔴 I-3 노트북 코드 분석 |
-| 윤지호 | 노트북·가중치 그대로 CSV만 수정 | 🔴 I-7 결과만 바뀐 제출 · I-6 일치율 97% |
+| 오지우 | 박민준의 CSV 그대로 (패션 MNIST) | 🔴 I-1 완전 중복 · I-6 재실행 일치율 81.5% |
+| 한예준 | 최서연의 CSV를 30문항 바꿔 제출 | 🔴 I-2 부분 복사 패턴 · 🟡 I-8 보고한 교차 검증 평균과 실제 점수 불일치 |
+| 임수아 | 예측값을 코드에 직접 기입 | 🔴 I-3 노트북 코드 분석 · 🟡 I-8 교차 검증 출력 없음 |
+| 윤지호 | 노트북·가중치 그대로 CSV만 수정 | 🔴 I-7 결과만 바뀐 제출 · I-6 일치율 89.7% · 🟡 I-8 |
+| 신하린 | 교차 검증 결과를 출력하지 않은 노트북 (HAR) | 🟡 I-8 수업 규칙상 결과 처리 제외 대상 |
+| 송유나 | 훈련 데이터로 '검증'한 RMSE 를 보고 (킹 카운티) | 🟡 I-8 보고 평균 60,643 vs 실제 126,547 |
+
+> I-8 은 실제 수업 노트북(정원의 딥러닝·머신러닝 미니프로젝트 제출본 8개)으로 출력 형식을 검증해 만들었다 — numpy 배열 줄바꿈·`1.` 표기, `(10-fold)` 의 숫자, 오차 행렬·분류 리포트의 숫자를 폴드 점수로 오인하지 않는다
 
 ### 탐지 실험 (정직 20 · 부정 30)
 
@@ -290,7 +306,7 @@ VM 1대 + Docker + Caddy(HTTPS 자동) 구성, 약 30분 — 단계별 명령·`
     │   ├── grading/            # 지표 레지스트리·CSV 검증·채점 워커·재채점·장애 복구
     │   ├── leaderboard/        # 최고 점수·공동 순위·익명화·순위 변화
     │   ├── review/             # 검토 상태 머신·일괄 승인·안전한 노트북 렌더러
-    │   ├── integrity/          # 무결성 검사 I-1~I-7·샌드박스 재실행·자가 진단
+    │   ├── integrity/          # 무결성 검사 I-1~I-8·샌드박스 재실행·자가 진단
     │   └── audit/              # 해시 체인 감사 로그
     ├── templates/  static/  assets/app.css (디자인 토큰)
     └── Dockerfile · entrypoint.sh
@@ -301,7 +317,7 @@ VM 1대 + Docker + Caddy(HTTPS 자동) 구성, 약 30분 — 단계별 명령·`
 ## 테스트
 
 ```bash
-cd web && ../.venv/bin/pytest            # 131개 — 경계값·동시성·권한 매트릭스·보안·부정 탐지·HTTP 흐름·접근성·쿼리 수·사용 안내
+cd web && ../.venv/bin/pytest            # 140개 — 경계값·동시성·권한 매트릭스·보안·부정 탐지·HTTP 흐름·접근성·쿼리 수·사용 안내
 ../.venv/bin/python manage.py sandbox_selftest   # 샌드박스 공격 6종 실측 (compose: sandbox-worker 컨테이너에서)
 ../.venv/bin/python manage.py integrity_experiment --rerun   # 부정 탐지 실험 (정직 20 · 부정 30)
 ```

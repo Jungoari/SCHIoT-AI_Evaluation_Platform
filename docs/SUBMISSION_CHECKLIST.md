@@ -38,7 +38,7 @@ git push -u origin main
 ### 올린 뒤 확인
 
 - [ ] 저장소 첫 화면에서 README 의 로고·배지·GIF 가 보이는가
-- [ ] Actions 탭의 CI 가 초록색(통과)인가 — 테스트 131개 · 린트 · 보안 검사(bandit) · 의존성 취약점(pip-audit) · 마이그레이션 누락
+- [ ] Actions 탭의 CI 가 초록색(통과)인가 — 테스트 140개 · 린트 · 보안 검사(bandit) · 의존성 취약점(pip-audit) · 마이그레이션 누락
 - [ ] 로그인하지 않은 브라우저(시크릿 창)에서 URL 이 열리는가
 - [ ] `presentation/` 의 .pptx·PDF 를 내려받아 열리는가
 

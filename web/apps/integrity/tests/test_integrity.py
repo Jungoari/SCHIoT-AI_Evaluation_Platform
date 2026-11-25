@@ -107,3 +107,57 @@ def test_analyze_notebook_ignores_magics():
 
 def test_labels_constant():
     assert LABELS == ["setosa", "versicolor", "virginica"]
+
+
+# ---------------------------------------------------------------------------
+# I-8 교차 검증 출력 — 실제 수업 노트북에서 본 출력 형식으로 검증
+# ---------------------------------------------------------------------------
+from apps.integrity.services import check_cv_output, find_cv_report  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    ("text", "has_k", "mean"),
+    [
+        # 폴드별 줄 + 평균
+        ("Fold 1: accuracy=0.84\nFold 2: accuracy=0.82\nFold 3: accuracy=0.82\nFold 4: accuracy=0.83\nFold 5: accuracy=0.85\n"
+         "5-fold CV 평균 정확도: 0.8320", True, 0.832),
+        # numpy 배열이 줄바꿈되고 1.0 이 '1.' 로 찍힌 경우 (실제 노트북 형식)
+        ("각 fold 정확도: [0.994565 0.995924 0.990476 0.990476 0.991837 0.997279 0.997279 0.991837\n 1.       0.997279]\n"
+         "10-fold 평균 정확도: 0.994695", True, 0.994695),
+        # '5-fold' 라고 적었지만 점수가 2개뿐인 경우 → 인정 안 함
+        ("5-fold CV accuracy results: [0.9556, 0.9508]\n5-fold CV mean accuracy: 0.9568", False, 0.9568),
+        # '(10-fold)' 의 10 을 평균으로 읽지 않는다 · 'mean_rmse' 는 평균 보고가 아님
+        ("최적 평균 RMSE (10-fold): 111727.8820\n상위 5개 조합 (mean_rmse 기준):", False, 111727.882),
+        ("Best Mean RMSE (10-fold x 3 seeds): 0.5619", False, 0.5619),
+        # 오차 행렬 행·분류 리포트의 avg 줄은 폴드 점수·평균이 아님
+        ("[[1407 0 0 0 0 0]\n [0 1270 16 0 0 0]]\n   macro avg   0.99   1.00   0.99   7352", False, None),
+    ],
+)
+def test_I08_find_cv_report_real_formats(text, has_k, mean):
+    r = find_cv_report(text, 5)
+    assert r["has_k_folds"] is has_k
+    assert r["reported_mean"] == (pytest.approx(mean) if mean is not None else None)
+
+
+def _nb_with_output(text):
+    return {"cells": [{"cell_type": "code", "source": "print(scores)", "execution_count": 1,
+                       "outputs": [{"output_type": "stream", "name": "stdout", "text": text}]}]}
+
+
+def test_I08_only_when_project_requires(project, participant):
+    sub = submit(participant, project, predictions_csv(project))
+    sub.project.cv_folds = 0
+    assert check_cv_output(sub, _nb_with_output("nothing")) is None
+    sub.project.cv_folds = 5
+    missing = check_cv_output(sub, _nb_with_output("train score 0.99"))
+    assert missing["level"] == "yellow" and "5개 폴드 점수" in missing["detail"]
+
+
+def test_I08_reported_mean_far_from_official_score(project, participant):
+    sub = submit(participant, project, predictions_csv(project, wrong_rows=range(30)))  # 공식 점수 0.5
+    sub.project.cv_folds = 5
+    ok = "CV scores: [0.51 0.49 0.50 0.52 0.48]\nmean 0.50"
+    inflated = "CV scores: [0.97 0.98 0.99 0.97 0.98]\nmean 0.978"
+    assert check_cv_output(sub, _nb_with_output(ok))["level"] == "green"
+    flagged = check_cv_output(sub, _nb_with_output(inflated))
+    assert flagged["level"] == "yellow" and "차이가 큽니다" in flagged["detail"]

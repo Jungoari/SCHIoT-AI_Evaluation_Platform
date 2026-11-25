@@ -36,16 +36,18 @@ class ProjectForm(forms.ModelForm):
 
     class Meta:
         model = Project
-        fields = ["title", "description", "metric", "decimals", "grace_minutes"]
+        fields = ["title", "description", "metric", "decimals", "grace_minutes", "cv_folds"]
         widgets = {
             "title": forms.TextInput(attrs={"class": INPUT}),
             "description": forms.Textarea(attrs={"class": INPUT, "rows": 4}),
             "decimals": forms.NumberInput(attrs={"class": INPUT, "min": 1, "max": 8}),
             "grace_minutes": forms.NumberInput(attrs={"class": INPUT, "min": 1, "max": 240}),
+            "cv_folds": forms.NumberInput(attrs={"class": INPUT, "min": 0, "max": 20}),
         }
         help_texts = {
             "decimals": "순위·동점 비교에 쓰는 소수점 자릿수",
             "grace_minutes": "업로드 시작 후 완료까지 허용하는 시간 (마감 직전 대용량 업로드 보호)",
+            "cv_folds": "0 이면 검사 안 함. 예: 5 → 노트북 실행 결과에 5개 폴드 점수와 평균이 출력돼 있는지 자동 확인",
         }
 
     def __init__(self, *args, **kwargs):
@@ -53,6 +55,8 @@ class ProjectForm(forms.ModelForm):
         self.fields["metric"] = forms.ChoiceField(
             label="평가 지표", choices=metric_choices(), widget=forms.Select(attrs={"class": INPUT})
         )
+        # 교차 검증 출력 검사는 선택 기능 — 비워 두면 0 (검사 안 함)
+        self.fields["cv_folds"].required = False
         if self.instance and self.instance.pk:
             default = METRICS[self.instance.metric].higher_is_better if self.instance.metric in METRICS else True
             if self.instance.higher_is_better != default:
@@ -81,6 +85,9 @@ class ProjectForm(forms.ModelForm):
         if commit:
             project.save()
         return project
+
+    def clean_cv_folds(self):
+        return self.cleaned_data.get("cv_folds") or 0
 
 
 class TestsetForm(forms.Form):

@@ -92,7 +92,7 @@ class Command(BaseCommand):
 
         comp = Competition.objects.create(
             title="2026-2 머신러닝 기말 프로젝트",
-            description="손글씨 숫자 분류와 당뇨 진행도 회귀 두 과제로 모델 성능을 겨룹니다",
+            description="딥러닝 미니프로젝트 1~4 (패션 MNIST · 스마트폰 행동 인식 · 킹 카운티 집값 · 레드 와인 품질). 각 노트북에는 5-폴드 교차 검증 결과와 평균을 출력해야 합니다",
             created_by=prof,
         )
         for ta in tas:

@@ -159,6 +159,8 @@ class Project(models.Model):
     label_sha256 = models.CharField(max_length=64, blank=True)
 
     grace_minutes = models.PositiveIntegerField("마감 후 업로드 허용 시간(분)", default=30)
+    # 수업 규칙 예: "5-폴드 교차 검증 결과와 평균이 출력된 노트북만 인정" → 무결성 검사 I-8 로 자동 확인 (0 = 검사 안 함)
+    cv_folds = models.PositiveSmallIntegerField("교차 검증 출력 필수 (k-fold)", default=0)
     is_published = models.BooleanField("공개", default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

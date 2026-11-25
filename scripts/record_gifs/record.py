@@ -151,23 +151,32 @@ def email(local):
 # ---------------------------------------------------------------------------
 # 데이터 준비
 # ---------------------------------------------------------------------------
+from apps.core.demo import P1_TITLE as P1  # noqa: E402 — 데모 생성기와 같은 이름을 쓴다
+
+
 def project_id(title):
     from apps.competitions.models import Project
 
     return Project.objects.filter(title=title).order_by("-pk").first().pk
 
 
-def digits_files(model_key="logreg_c2"):
-    """손글씨 숫자 프로젝트용 실제 제출물 생성 (CSV · 노트북 · 가중치)"""
+def fashion_files():
+    """패션 MNIST 프로젝트용 실제 제출물 생성 (CSV · 5-폴드 결과가 출력된 노트북 · 가중치)"""
     from apps.core import demo
     from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import MinMaxScaler
 
-    train, test = demo.digits_frames()
+    train, test = demo.fashion_frames()
     X, y = train.drop(columns=["id", "label"]), train["label"]
-    model = LogisticRegression(C=0.2, max_iter=3000).fit(X, y)
+    model = make_pipeline(MinMaxScaler(), LogisticRegression(C=0.2, max_iter=300))
+    scores = demo.cv_scores(model, X, y, "accuracy")
+    model.fit(X, y)
     pred = model.predict(test.drop(columns=["id", "label"]))
-    code = "from sklearn.linear_model import LogisticRegression\nmodel = LogisticRegression(C=0.2, max_iter=3000)"
-    nb = demo.make_notebook(code, "label", [f"validation accuracy {(pred == test['label']).mean():.4f}"])
+    code = ("from sklearn.pipeline import make_pipeline\nfrom sklearn.preprocessing import MinMaxScaler\n"
+            "from sklearn.linear_model import LogisticRegression\n"
+            "model = make_pipeline(MinMaxScaler(), LogisticRegression(C=0.2, max_iter=300))")
+    nb = demo.make_notebook(code, "label", demo.cv_log(scores, "accuracy"))
     d = TMP / "files"
     d.mkdir(parents=True, exist_ok=True)
     pd.DataFrame({"id": test["id"], "label": pred}).to_csv(d / "submission.csv", index=False)
@@ -204,27 +213,27 @@ def g01_create(browser):
 
     d = TMP / "files"
     d.mkdir(parents=True, exist_ok=True)
-    _, test = demo.digits_frames()
-    test.to_csv(d / "digits_test_with_labels.csv", index=False)
+    _, test = demo.fashion_frames()
+    test.to_csv(d / "fashion_test_with_labels.csv", index=False)
     with Recording(browser, "G01_create_competition", email("prof")) as r:
         r.caption("TC-A04", "교수 · 대회 개설과 참여 코드 자동 발급", "참여자 코드·운영 코드가 자동 생성되고 한 번만 표시", "RFP p.3")
         r.click("text=대회 개설")
         r.type("input[name=title]", "2026-2 딥러닝 중간 프로젝트")
-        r.type("textarea[name=description]", "CNN 없이 픽셀 특성만으로 숫자를 분류합니다", delay=25)
+        r.type("textarea[name=description]", "미니프로젝트 #1 — 패션 이미지 10개 클래스 분류", delay=25)
         r.click("button:has-text('대회 개설하고')", wait=1.2)
         expect(r.page.locator("[data-testid=participant-code]")).to_have_text(re.compile(r"^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$"))
         r.passed("참여자·운영 코드 발급 (해시로만 저장)", hold=1.6)
         r.click("text=대회 홈으로")
         r.caption("TC-D", "프로젝트 추가 → 정답 파일 업로드", "ID 열·정답 열·분류/회귀·허용 레이블·행 수 자동 분석", "RFP p.5")
         r.click("a:has-text('프로젝트 추가')")
-        r.type("input[name=title]", "숫자 분류")
+        r.type("input[name=title]", "패션 MNIST 분류")
         r.click("button:has-text('다음')", wait=1)
-        r.page.set_input_files("input[name=testset]", str(d / "digits_test_with_labels.csv"))
+        r.page.set_input_files("input[name=testset]", str(d / "fashion_test_with_labels.csv"))
         r.click("button:has-text('업로드')", wait=1.2)
         r.scroll_to("text=자동 분석 결과 확인", wait=1.5)
         expect(r.page.locator("text=자동 분석 결과 확인")).to_be_visible()
         r.click("button:has-text('형식 확정')", wait=1.2)
-        r.caption("TC-B05", "마감일·횟수 설정 후 공개", "정답 열이 제거된 학생용 자료이 자동 생성되고 공개 가능", "RFP p.4~5")
+        r.caption("TC-B05", "마감일·횟수 설정 후 공개", "정답 열이 제거된 학생용 자료가 자동 생성되고 공개 가능", "RFP p.4~5")
         r.scroll_to("#deadlines")
         r.page.fill("input[name=due_at]", (timezone.localtime() + timedelta(days=7)).strftime("%Y-%m-%dT18:00"))
         r.click("#deadlines button:has-text('추가')", wait=1.2)
@@ -267,8 +276,8 @@ def g02_signup(browser):
 
 def g03_submit(browser):
     """G03 제출 → 사전 검사 → 지문 계산 → 업로드 → 즉시 채점 → 순위"""
-    d = digits_files()
-    pid = project_id("손글씨 숫자 분류")
+    d = fashion_files()
+    pid = project_id(P1)
     with Recording(browser, "G03_submit", email("student4"), f"/p/{pid}/") as r:
         r.caption("TC-C01", "참여자 · CSV·노트북·가중치 제출", "사전 검사 → 업로드 → 즉시 채점, 1회 차감, 순위 표시", "RFP p.4~5")
         r.pause(0.8)
@@ -282,8 +291,8 @@ def g03_submit(browser):
 
 def g04_format_error(browser):
     """G04 형식 오류 — 행 단위 안내, 횟수 미차감"""
-    d = digits_files()
-    pid = project_id("손글씨 숫자 분류")
+    d = fashion_files()
+    pid = project_id(P1)
     with Recording(browser, "G04_format_error", email("student6"), f"/p/{pid}/") as r:
         r.caption("TC-D02", "허용되지 않은 레이블·빈 값이 있는 CSV", "업로드 전에 행 번호와 함께 안내, 제출 횟수 차감 없음", "RFP p.5")
         before = r.page.locator("[data-testid=quota] .stat-value").inner_text()
@@ -313,14 +322,14 @@ def g05_deadline(browser):
     Project.objects.filter(title="마감 경계 시연").delete()
     p = Project.objects.create(competition=comp, title="마감 경계 시연", task_type="classification", metric="accuracy",
                                higher_is_better=True, decimals=4, grace_minutes=30)
-    _, test = demo.digits_frames()
+    _, test = demo.fashion_frames()
     cs.upload_testset(p, upload("t.csv", test.to_csv(index=False).encode()), prof)
     cs.confirm_schema(p, "id", "label", "classification", prof)
     due = timezone.now() + timedelta(seconds=24)
     Deadline.objects.create(project=p, title="최종 마감", due_at=due, max_submissions=5)
     p.is_published = True
     p.save()
-    d = digits_files()
+    d = fashion_files()
     with Recording(browser, "G05_deadline_boundary", email("student3"), f"/p/{p.pk}/") as r:
         r.caption("TC-B01", "마감 직전에 업로드 시작 → 마감 후 업로드 완료", "업로드 '시작 시각' 기준 → 정상 채점", "RFP p.4")
         cdp = r.ctx.new_cdp_session(r.page)
@@ -348,7 +357,7 @@ def g05_deadline(browser):
 
 def g08_leaderboard(browser):
     """G08 같은 리더보드: 참여자(익명) vs 관리자(실명) — 두 영상을 나란히"""
-    pid = project_id("손글씨 숫자 분류")
+    pid = project_id(P1)
     for who, label, tc in (("student2", "참여자 화면 — 익명 이름만 (실명은 응답에 아예 없음)", "참여자"),
                            ("ta", "관리자 화면 — 실명·학번", "조교")):
         with Recording(browser, f"_G08_{who}", email(who), f"/p/{pid}/leaderboard/") as r:
@@ -382,8 +391,8 @@ def g09_review(browser):
     """G09 관리자1 검토: 무결성 리포트 + 격리 노트북 + 판정 제안"""
     from apps.review.models import Review
 
-    r9 = Review.objects.get(submission__user__name="한예준", submission__project__title="손글씨 숫자 분류")
-    pid = project_id("손글씨 숫자 분류")
+    r9 = Review.objects.get(submission__user__name="한예준", submission__project__title=P1)
+    pid = project_id(P1)
     with Recording(browser, "G09_admin1_review", email("ta"), f"/p/{pid}/review/") as r:
         r.caption("TC-F01", "조교 · 검토 목록 — 참여자별 최고 점수 기록부터", "부정 점검 신호등으로 볼 곳을 먼저 확인", "RFP p.6, p.8")
         r.pause(1.8)
@@ -401,8 +410,8 @@ def g10_approve(browser):
     """G10 관리자2: 부적합 승인 → 다음 기록 자동 상정, 적합 일괄 승인"""
     from apps.review.models import Review
 
-    r8 = Review.objects.get(submission__user__name="오지우", submission__project__title="손글씨 숫자 분류")
-    pid = project_id("손글씨 숫자 분류")
+    r8 = Review.objects.get(submission__user__name="오지우", submission__project__title=P1)
+    pid = project_id(P1)
     with Recording(browser, "G10_admin2_approve", email("prof"), f"/review/{r8.pk}/") as r:
         r.caption("TC-F03", "교수 · 부적합 확정", "해당 기록 제외 → 같은 참여자의 다음 기록이 자동으로 검토 목록에", "RFP p.6")
         r.scroll_to("button:has-text('부적합 확정')", wait=1.4)
@@ -423,7 +432,7 @@ def g11_integrity(browser):
     from apps.review.models import Review
 
     def rid(name):
-        return Review.objects.get(submission__user__name=name, submission__project__title="손글씨 숫자 분류").pk
+        return Review.objects.get(submission__user__name=name, submission__project__title=P1).pk
 
     with Recording(browser, "G11_cheating_detection", email("ta"), f"/review/{rid('윤지호')}/") as r:
         r.caption("TC-I07", "코드·가중치는 그대로, CSV만 수정한 제출", "I-7 결과만 바뀐 제출 🔴", "RFP p.8 ★")
@@ -433,7 +442,10 @@ def g11_integrity(browser):
         r.page.wait_for_load_state("networkidle")
         r.scroll_to("[data-testid=integrity]", wait=1.2)
         expect(r.page.locator("[data-testid=integrity]")).to_contain_text("일치합니다")
-        r.passed("다시 실행 일치율 97% → 수기 수정 의심", hold=1.8)
+        from apps.integrity.models import IntegrityReport  # 실제 재실행 결과를 그대로 표시 (하드코딩 금지)
+
+        rate = IntegrityReport.objects.get(submission__review__pk=rid("윤지호")).rerun.get("match_rate", 0)
+        r.passed(f"다시 실행 일치율 {rate:.0%} → 수기 수정 의심", hold=1.8)
         r.caption("TC-I03", "예측값을 코드에 직접 적은 노트북", "AST 분석으로 상수 목록 탐지 🔴", "RFP p.8 ★")
         r.go(f"/review/{rid('임수아')}/", wait=0.4)
         r.scroll_to("[data-testid=integrity]", wait=1.8)
@@ -449,7 +461,7 @@ def g13_xss(browser):
     from apps.testing import submit
 
     user = User.objects.get(email=email("student2"))
-    pid = project_id("손글씨 숫자 분류")
+    pid = project_id(P1)
     best = Submission.objects.filter(user=user, project_id=pid, status="graded").order_by("-score").first()
     from apps.core import storage
 
@@ -477,7 +489,7 @@ def g13_xss(browser):
 
 def g15_permissions(browser):
     """G15 권한 우회 차단"""
-    pid = project_id("손글씨 숫자 분류")
+    pid = project_id(P1)
     with Recording(browser, "G15_permission_bypass", email("student1"), f"/p/{pid}/") as r:
         r.caption("TC-A06", "참여자가 관리자 설정 주소를 직접 입력", "404 — 페이지 존재 여부도 숨김", "RFP p.7")
         r.pause(1)
@@ -613,9 +625,12 @@ def start_server():
     subprocess.run([PY, "manage.py", "collectstatic", "--noinput"], cwd=WEB, env=env, check=True, capture_output=True)
     proc = subprocess.Popen([PY, "manage.py", "runserver", f"127.0.0.1:{PORT}", "--noreload", "--nostatic"], cwd=WEB, env=env,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    for _ in range(60):
+    # iCloud 동기화 폴더에서는 첫 기동이 수십 초 걸릴 수 있어 넉넉히 기다린다
+    started = time.time()
+    for _ in range(240):
         try:
-            urllib.request.urlopen(BASE + "/healthz", timeout=1)
+            urllib.request.urlopen(BASE + "/healthz", timeout=2)
+            print(f"녹화용 서버 준비 ({time.time() - started:.0f}초)")
             return proc
         except Exception:
             time.sleep(0.5)
