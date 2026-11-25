@@ -260,7 +260,7 @@ def build():
          anchor=MSO_ANCHOR.MIDDLE, align=PP_ALIGN.CENTER)
     text(s, 4.0, 2.05, 2.0, 0.35, [("작업 대기열 (Redis)", {"size": 10, "color": MUTED})], align=PP_ALIGN.CENTER)
     for x, title_, sub, tag, tag_color in ((0.7, "채점 담당", "CSV 숫자만 비교 (코드 실행 안 함)", "정답 있음 · 코드 실행 없음", GREEN),
-                                          (5.3, "검증 담당", "학생 코드 실행을 지시만 함", "정답 없음", RED)):
+                                          (5.3, "검증 담당", "학생 코드 실행을 지시만 함", "정답 없음 · 컨테이너 명령만 허용", RED)):
         rect(s, x, 2.5, 4.0, 1.2, CARD)
         text(s, x, 2.55, 4.0, 1.1, [(title_, {"size": 15, "bold": True, "color": NAVY}), (sub, {"size": 12, "color": MUTED}),
                                     (tag, {"size": 12, "bold": True, "color": tag_color})], align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
@@ -431,7 +431,7 @@ def build():
 
     # 17. 설계 품질
     s = content_slide(prs, "설계 품질 — 숫자로 확인", n); n += 1
-    for i, (v, l) in enumerate([("46/46", "RFP 요구사항\n모두 구현"), ("140", "자동 테스트\n모두 통과"), ("6/6", "보안 공격 시도\n모두 차단")]):
+    for i, (v, l) in enumerate([("46/46", "RFP 요구사항\n모두 구현"), ("145", "자동 테스트\n모두 통과"), ("6/6", "보안 공격 시도\n모두 차단")]):
         stat_card(s, 0.45 + i * 3.08, 1.25, 2.94, 1.9, v, l, GREEN if i in (0, 2) else NAVY)
     rect(s, 0.45, 3.45, 4.45, 3.4, CARD)
     text(s, 0.6, 3.55, 4.2, 3.2, [("고치기 쉬운 구조", {"size": 15, "bold": True, "color": NAVY, "space_after": 6})] + bullets([

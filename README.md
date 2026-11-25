@@ -8,7 +8,7 @@
 
 수업용 폐쇄형 Kaggle — CSV 자동 채점 · 실시간 리더보드 · 관리자 2단계 검증 · 부정 제출 자동 탐지 · 격리 재실행
 
-![tests](https://img.shields.io/badge/tests-140%20passed-22d39a) ![python](https://img.shields.io/badge/python-3.13-2f63ea) ![django](https://img.shields.io/badge/django-5.2-2f63ea) ![docker](https://img.shields.io/badge/docker%20compose-1%20command-2f63ea) ![security](https://img.shields.io/badge/sandbox%20attacks-6%2F6%20blocked-22d39a)
+![tests](https://img.shields.io/badge/tests-145%20passed-22d39a) ![python](https://img.shields.io/badge/python-3.13-2f63ea) ![django](https://img.shields.io/badge/django-5.2-2f63ea) ![docker](https://img.shields.io/badge/docker%20compose-1%20command-2f63ea) ![security](https://img.shields.io/badge/sandbox%20attacks-6%2F6%20blocked-22d39a)
 
 <img src="docs/assets/gifs/G03_submit.gif" alt="제출 → 즉시 채점 → 순위" width="860">
 
@@ -109,7 +109,7 @@ RFP에서 추출한 요구사항 **46개 전부 구현**했고, 각 항목은 �
 | **G09 관리자1 검토 · 무결성 리포트 · 판정 제안**<br><img src="docs/assets/gifs/G09_admin1_review.gif" width="420"> | **G10 관리자2 부적합 확정 → 다음 기록 · 일괄 승인**<br><img src="docs/assets/gifs/G10_admin2_approve.gif" width="420"> |
 | **G11 부정 제출 적발 + 격리 재실행(I-6)**<br><img src="docs/assets/gifs/G11_cheating_detection.gif" width="420"> | **G12 샌드박스 공격 6종 실측 차단**<br><img src="docs/assets/gifs/G12_sandbox_attacks.gif" width="420"> |
 | **G13 노트북 XSS 무력화** (관리자 세션 보호)<br><img src="docs/assets/gifs/G13_notebook_xss.gif" width="420"> | **G15 권한 우회 차단** (설정·타인 제출물 → 404)<br><img src="docs/assets/gifs/G15_permission_bypass.gif" width="420"> |
-| **G16 감사 로그 위변조 감지**<br><img src="docs/assets/gifs/G16_audit_tamper.gif" width="420"> | **G17 전체 자동화 테스트 140개 통과**<br><img src="docs/assets/gifs/G17_all_tests.gif" width="420"> |
+| **G16 감사 로그 위변조 감지**<br><img src="docs/assets/gifs/G16_audit_tamper.gif" width="420"> | **G17 전체 자동화 테스트 통과**<br><img src="docs/assets/gifs/G17_all_tests.gif" width="420"> |
 | **G18 부정 탐지 실험** (정직 20 · 부정 30)<br><img src="docs/assets/gifs/G18_integrity_experiment.gif" width="420"> | |
 
 ---
@@ -152,9 +152,14 @@ RFP에서 추출한 요구사항 **46개 전부 구현**했고, 각 항목은 �
                          │ Redis 큐                   │
            ┌─────────────▼──────────┐   ┌─────────────▼──────────────┐
            │ worker (채점)           │   │ sandbox-worker (검증)        │
-           │ 정답 O · 코드 실행 X     │   │ 정답 X · 컨테이너 지시만       │
+           │ 정답 O · 코드 실행 X     │   │ 정답 X · 비루트 · 지시만        │
            │ CSV는 '데이터'로만 파싱   │   └─────────────┬──────────────┘
-           └────────────────────────┘                 │ docker run
+           └────────────────────────┘                 │ 전용 내부망
+                                          ┌───────────▼─────────────────────┐
+                                          │ docker-proxy (Docker 관문)       │
+                                          │ 컨테이너 API만 통과 · 나머지 403  │
+                                          └───────────┬─────────────────────┘
+                                                      │ docker run
                                           ┌───────────▼─────────────────────┐
                                           │ 샌드박스 컨테이너 (매번 새로 생성) │
                                           │ 네트워크 없음 · 읽기 전용 · 비루트  │
@@ -239,6 +244,7 @@ $ python manage.py sandbox_selftest
 | 부적절한 인가 · 중요정보 노출 | 권한 정책 단일 모듈 + 권한 매트릭스 테스트, 권한 없음은 404, 실명은 서버에서 제외 |
 | 반복 인증 시도 · 취약한 비밀번호 | 로그인 10회·참여 코드 10회 실패 시 15분 제한, Argon2, 10자 이상·흔한 비밀번호 차단 |
 | 오류 메시지 정보노출 · 하드코드된 중요정보 | 추적 ID만 표시, 로그 비밀값 마스킹, `.env` 분리 |
+| 과도한 권한 (Docker 제어권) | 샌드박스 워커는 비루트로 실행, Docker 소켓은 **컨테이너 API만 허용하는 관문(docker-proxy)** 에만 연결, 전용 내부망으로 다른 서비스와 분리 |
 | 취약한 라이브러리 | `pip-audit` 웹·샌드박스 라이브러리 취약점 0건, CI 에서 발견 시 빌드 실패 · 샌드박스 버전 고정 |
 
 ---
@@ -282,7 +288,7 @@ VM 1대 + Docker + Caddy(HTTPS 자동) 구성, 약 30분 — 단계별 명령·`
 ## 파일 구조
 
 ```
-├── docker-compose.yml          # web · worker · sandbox-worker · db · redis
+├── docker-compose.yml          # web · worker · sandbox-worker · docker-proxy · db · redis
 ├── .env.example                # 환경 변수 예시 (실제 .env 는 커밋 금지)
 ├── sandbox/                    # 참여자 노트북 격리 실행 이미지 (Dockerfile, run.py)
 ├── docs/                       # 기획·보안·성능·탐지 실험·요구사항 추적·배포·사용성 테스트·발표 가이드
@@ -317,7 +323,7 @@ VM 1대 + Docker + Caddy(HTTPS 자동) 구성, 약 30분 — 단계별 명령·`
 ## 테스트
 
 ```bash
-cd web && ../.venv/bin/pytest            # 140개 — 경계값·동시성·권한 매트릭스·보안·부정 탐지·HTTP 흐름·접근성·쿼리 수·사용 안내
+cd web && ../.venv/bin/pytest            # 145개 — 경계값·동시성·권한 매트릭스·보안·부정 탐지·HTTP 흐름·접근성·쿼리 수·사용 안내
 ../.venv/bin/python manage.py sandbox_selftest   # 샌드박스 공격 6종 실측 (compose: sandbox-worker 컨테이너에서)
 ../.venv/bin/python manage.py integrity_experiment --rerun   # 부정 탐지 실험 (정직 20 · 부정 30)
 ```
@@ -356,7 +362,9 @@ Django 5.2 · PostgreSQL 17 · Redis 7 + RQ · HTMX · Tailwind CSS 4 · Pretend
 - PyTorch·TensorFlow 모델 재실행은 샌드박스 이미지에 패키지를 추가해 빌드해야 함 (`sandbox/Dockerfile`의 `EXTRA_PACKAGES`)
 - GPU가 필요한 노트북 재실행은 범위 밖 (CPU 시간 제한 내 추론만)
 - 이메일 알림·토론 게시판은 미구현 (단톡방 운영을 대체하지 않음)
-- 운영 배포 시 샌드박스는 gVisor 등 추가 격리 런타임 사용 권장
+- Docker 관문(docker-proxy)은 요청 종류만 거르고 컨테이너 생성 옵션까지는 검사하지 않음 → 운영 배포 시 rootless Docker 또는 gVisor 등 추가 격리 런타임 사용 권장
+- 다시 실행 검증(I-6)은 조교·교수가 요청할 때만 실행 (모든 제출 자동 실행 시 CPU 사용량이 제출 수에 비례해 늘어남)
+- 업로드는 한 번에 전송 — 네트워크가 끊기면 처음부터 다시 올려야 함 (파일 크기 제한 안에서는 실사용 문제 없음)
 
 ---
 

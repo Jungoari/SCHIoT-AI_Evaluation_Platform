@@ -16,4 +16,5 @@ RFP p.7: 참여자 코드 실행 시 정답·비밀키·다른 참여자 자료�
 
 ## 결과
 - `sandbox_selftest` 공격 6종 실측 차단
-- 트레이드오프: `sandbox-worker`는 Docker 소켓 때문에 root. 운영 시 rootless Docker 또는 gVisor 권장 (SECURITY.md)
+- Docker 소켓은 `docker-proxy`(컨테이너 API만 허용, 전용 내부망)에만 연결하고 `sandbox-worker`는 비루트로 프록시를 거친다 (2026-11-25 보강)
+- 남은 트레이드오프: 프록시는 컨테이너 생성 옵션까지는 검사하지 않음 → 운영 시 rootless Docker 또는 gVisor 권장 (SECURITY.md)

@@ -7,6 +7,7 @@
 ```
 인터넷 ──HTTPS──▶ Caddy (호스트, 인증서 자동) ──http──▶ 127.0.0.1:8000 web 컨테이너
                                                          worker · sandbox-worker · db · redis (외부 비노출)
+                                                         sandbox-worker ──전용 내부망──▶ docker-proxy ──▶ Docker (컨테이너 API만)
 ```
 
 ---

@@ -107,5 +107,6 @@ python manage.py sandbox_selftest   # 결과: 6/6 공격 차단
 
 ## 4. 알려진 제약
 
-- `sandbox-worker`는 Docker 소켓을 쓰므로 root로 실행된다. 대신 정답 볼륨·웹 포트가 없고, 참여자 코드는 별도 격리 컨테이너에서만 실행된다. 운영 환경에서는 rootless Docker 또는 gVisor(`runsc`) 런타임을 권장한다.
+- `sandbox-worker`는 **비루트(uid 1000)** 로 실행되고 Docker 소켓을 직접 갖지 않는다. Docker 소켓은 `docker-proxy` 한 곳에만 읽기 전용으로 연결되며, 프록시는 **컨테이너 관련 API만** 통과시킨다. 이미지 받기·볼륨·네트워크·exec·시스템 정보 요청은 403으로 거부된다. 프록시는 외부와 끊긴 전용 망(`docker-api`, internal)에 있어 `sandbox-worker` 외에는 접근할 수 없다. 회귀 테스트는 `test_compose_security.py`.
+- 남은 위험: 프록시는 요청 '종류'만 거르고 컨테이너 생성 옵션(볼륨 연결 등)까지는 검사하지 않는다. 따라서 `sandbox-worker` 자체가 장악되면 위험한 옵션으로 컨테이너를 만들 여지가 있다. 이 워커는 참여자 코드를 실행하지 않고 정답 볼륨도 없어 그럴 가능성은 낮다. 운영 환경에서는 rootless Docker 또는 gVisor(`runsc`) 런타임을 함께 쓰는 것을 권장한다.
 - HTTPS 종단은 배포 환경의 리버스 프록시에서 처리한다 (`SECURE_COOKIES=true`, `SECURE_HSTS=true`, `TRUSTED_PROXY_COUNT=1`) — [DEPLOY.md](DEPLOY.md)

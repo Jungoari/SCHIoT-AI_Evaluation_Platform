@@ -7,11 +7,14 @@ name: evalhub
 #   web            Django 웹 (gunicorn)
 #   worker         채점 워커   : 정답 접근 O, 참여자 코드 실행 X
 #   sandbox-worker 검증 워커   : 정답 접근 X, 샌드박스 컨테이너 실행만 지시
+#   docker-proxy   Docker 관문 : 컨테이너 관련 명령만 통과 (sandbox-worker 만 접근)
 #   db             PostgreSQL
 #   redis          작업 큐 / 캐시
 #
-# 핵심 보안 설계: 정답 볼륨(labels)은 web·worker 에만 마운트하고
-# sandbox-worker 와 샌드박스 컨테이너에는 절대 마운트하지 않는다
+# 핵심 보안 설계
+#   1) 정답 볼륨(labels)은 web·worker 에만 마운트하고 sandbox-worker 와 샌드박스 컨테이너에는 절대 마운트하지 않는다
+#   2) Docker 소켓은 docker-proxy 한 곳에만 (읽기 전용) 연결한다. sandbox-worker 는 프록시를 거쳐
+#      '컨테이너 만들기·실행·로그·삭제'만 할 수 있고 이미지·볼륨·네트워크·exec·시스템 명령은 막힌다
 # ------------------------------------------------------------
 
 x-app: &app
@@ -86,12 +89,45 @@ services:
       - uploads:/data/uploads
       - labels:/data/labels
 
+  # 샌드박스 작업 폴더 준비 (1회 실행 후 종료)
+  # 호스트 폴더가 없으면 Docker 가 root 소유로 만들기 때문에, 비루트(app, uid 1000) 워커가 쓸 수 있게 소유자를 맞춘다
+  sandbox-dir-init:
+    image: busybox:1.37
+    command: ["sh", "-c", "chown 1000:1000 /data/sandbox && chmod 755 /data/sandbox"]
+    volumes:
+      - ${SANDBOX_HOST_WORK_ROOT:-/tmp/evalplatform-sandbox}:/data/sandbox
+    network_mode: none
+    restart: "no"
+
+  # Docker 관문: Docker API 중 허용한 영역만 통과시킨다
+  #   CONTAINERS=1 · POST=1 → 컨테이너 생성·시작·대기·로그·종료·삭제
+  #   그 외(이미지 받기, 볼륨, 네트워크, exec, 시스템 정보 등)는 403 으로 거부
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:v0.5.0
+    environment:
+      CONTAINERS: 1
+      POST: 1
+      EVENTS: 0
+      IMAGES: 0
+      VOLUMES: 0
+      NETWORKS: 0
+      EXEC: 0
+      INFO: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - docker-api        # 외부와 단절된 전용 망 — sandbox-worker 만 같은 망에 있다
+    read_only: true
+    tmpfs:
+      - /run
+      - /tmp
+    restart: unless-stopped
+
   sandbox-worker:
     <<: *app
     command: ["/app/entrypoint.sh", "worker", "sandbox"]
-    # Docker 소켓으로 샌드박스 컨테이너를 띄워야 하므로 root 로 실행한다.
-    # 대신 이 워커에는 정답 볼륨이 없고, 웹 포트도 없으며, 참여자 코드는 별도의 격리 컨테이너에서만 실행된다.
-    user: "0:0"
+    # 비루트(app) 사용자로 실행. Docker 소켓을 직접 갖지 않고 docker-proxy 를 거친다
+    # 이 워커에는 정답 볼륨도, 웹 포트도 없고, 참여자 코드는 별도의 격리 컨테이너에서만 실행된다
     environment:
       RQ_EAGER: "false"
       POSTGRES_HOST: db
@@ -99,13 +135,24 @@ services:
       REDIS_URL: redis://redis:6379/0
       REDIS_CACHE_URL: redis://redis:6379/1
       DATA_ROOT: /data
-      # 샌드박스 작업 폴더의 '호스트 기준' 경로 (Docker 소켓으로 형제 컨테이너를 띄우므로 필요)
+      DOCKER_HOST: tcp://docker-proxy:2375
+      # 샌드박스 작업 폴더의 '호스트 기준' 경로 (형제 컨테이너에 폴더를 연결하므로 필요)
       SANDBOX_HOST_WORK_ROOT: ${SANDBOX_HOST_WORK_ROOT:-/tmp/evalplatform-sandbox}
     volumes:
       - uploads:/data/uploads:ro          # 제출물 읽기 전용
       - ${SANDBOX_HOST_WORK_ROOT:-/tmp/evalplatform-sandbox}:/data/sandbox
-      # 형제 컨테이너 실행용. 이 워커에는 정답 볼륨이 없다
-      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - default
+      - docker-api
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      docker-proxy:
+        condition: service_started
+      sandbox-dir-init:
+        condition: service_completed_successfully
 
   # 샌드박스 이미지 빌드 전용 (실행되지 않음). docker compose up --build 시 함께 빌드된다
   sandbox-image:
@@ -115,6 +162,12 @@ services:
     entrypoint: ["true"]
     restart: "no"
     network_mode: none
+
+networks:
+  default:
+  # Docker 관문 전용 망: 인터넷·다른 서비스와 단절 (internal)
+  docker-api:
+    internal: true
 
 volumes:
   pgdata:
